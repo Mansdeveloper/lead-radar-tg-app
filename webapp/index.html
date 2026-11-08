@@ -23,16 +23,14 @@
           },
           colors: {
             app: {
-              bg: '#0F0F14',
-              surface: '#181820',
-              surfaceElevated: '#20202B',
+              bg: '#0D0D12',
+              surface: '#171720',
+              surfaceElevated: '#1F1F2C',
               border: 'rgba(255, 255, 255, 0.08)',
             },
             accent: {
               coral: '#FF5E54',
-              coralLight: '#FFA39E',
               periwinkle: '#6366F1',
-              periwinkleLight: '#818CF8',
               yellow: '#FFCE54',
               lime: '#98FF3A',
               mint: '#34D399',
@@ -44,73 +42,71 @@
   </script>
   <style>
     body {
-      background-color: #0F0F14;
+      background-color: #0D0D12;
       color: #F4F4F6;
       font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, sans-serif;
       -webkit-font-smoothing: antialiased;
       user-select: none;
       -webkit-tap-highlight-color: transparent;
+      overflow-x: hidden;
     }
     .safe-top { padding-top: max(env(safe-area-inset-top, 0px), 12px); }
-    .safe-bottom { padding-bottom: max(calc(5.5rem + env(safe-area-inset-bottom, 0px)), 90px); }
+    /* Generous bottom padding to ensure the last card is NEVER hidden by the floating island */
+    .safe-bottom-pad { padding-bottom: calc(7.5rem + env(safe-area-inset-bottom, 24px)); }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
-<body class="h-full flex flex-col font-sans text-sm selection:bg-indigo-500/30">
+<body class="min-h-screen flex flex-col font-sans text-sm selection:bg-indigo-500/30">
 
-  <!-- TOP APP BAR (Inspired by Reference: Avatar + Location/Status Pill + Search/Bell) -->
-  <header class="sticky top-0 z-40 bg-[#0F0F14]/90 backdrop-blur-2xl px-4 py-2.5 safe-top flex items-center justify-between border-b border-white/[0.06]">
-    <!-- User Profile Greeting -->
+  <!-- TOP APP BAR -->
+  <header class="sticky top-0 z-40 bg-[#0D0D12]/90 backdrop-blur-2xl px-4 py-2.5 safe-top flex items-center justify-between border-b border-white/[0.06]">
     <div class="flex items-center space-x-2.5">
       <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-accent-coral via-accent-yellow to-accent-lime p-0.5 overflow-hidden shadow-sm">
         <img id="user-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80" class="w-full h-full object-cover rounded-full bg-zinc-800" alt="Avatar">
       </div>
       <div>
         <p class="text-[11px] text-zinc-400 font-medium leading-none">Привет, <span id="user-name" class="text-zinc-200 font-bold">Фрилансер</span>!</p>
-        <!-- Source Switcher Pill -->
-        <button onclick="switchSourcePill()" class="mt-1 flex items-center space-x-1.5 px-2 py-0.5 rounded-full bg-white/[0.06] border border-white/[0.08] text-[10px] font-bold text-zinc-300 font-display hover:bg-white/[0.1] transition-all">
+        <button onclick="showToast('Мониторинг бирж: FL.ru + Freelancehunt активен')" class="mt-1 flex items-center space-x-1.5 px-2 py-0.5 rounded-full bg-white/[0.06] border border-white/[0.08] text-[10px] font-bold text-zinc-300 font-display hover:bg-white/[0.1] transition-all">
           <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span id="active-sources-label">FL.ru + Freelancehunt</span>
-          <span class="text-zinc-500 text-[9px]">▾</span>
+          <span>FL.ru + Freelancehunt</span>
         </button>
       </div>
     </div>
 
-    <!-- Actions (Search Toggle + Notifications) -->
+    <!-- Actions (Search Toggle + Filter Drawer Toggle + Notifications) -->
     <div class="flex items-center space-x-1.5">
-      <button onclick="toggleSearchInput()" class="w-8 h-8 rounded-full bg-white/[0.06] border border-white/[0.08] flex items-center justify-center hover:bg-white/[0.12] transition-colors">
+      <button onclick="toggleSearchBar()" class="w-8 h-8 rounded-full bg-white/[0.06] border border-white/[0.08] flex items-center justify-center hover:bg-white/[0.12] transition-colors">
         <svg class="w-4 h-4 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
       </button>
-      <button onclick="showToast('Все 110 заказов актуальны в реальном времени')" class="w-8 h-8 rounded-full bg-white/[0.06] border border-white/[0.08] flex items-center justify-center relative hover:bg-white/[0.12] transition-colors">
-        <svg class="w-4 h-4 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
-        <span class="w-1.5 h-1.5 rounded-full bg-accent-coral absolute top-1.5 right-1.5"></span>
+      <button onclick="toggleInterestsModal()" class="w-8 h-8 rounded-full bg-white/[0.06] border border-white/[0.08] flex items-center justify-center hover:bg-white/[0.12] transition-colors relative" title="Выбрать интересы">
+        <svg class="w-4 h-4 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+        <span id="interests-active-dot" class="w-2 h-2 rounded-full bg-accent-lime absolute top-1 right-1 hidden border border-black"></span>
       </button>
     </div>
   </header>
 
   <!-- Collapsible Search Input -->
-  <div id="search-bar-wrap" class="hidden px-4 pt-2.5 pb-1 bg-[#0F0F14]">
+  <div id="search-bar-wrap" class="hidden px-4 pt-2 pb-1 bg-[#0D0D12] transition-all">
     <div class="relative">
       <input 
         type="text" 
         id="search-input" 
         placeholder="Поиск по стеку (например: python, bot, react)..." 
-        class="w-full bg-[#181820] border border-white/[0.1] rounded-2xl px-4 py-2.5 pl-10 text-xs text-white placeholder:text-zinc-500 outline-none focus:border-indigo-500 font-sans"
+        class="w-full bg-[#171720] border border-white/[0.1] rounded-2xl px-4 py-2.5 pl-10 text-xs text-white placeholder:text-zinc-500 outline-none focus:border-indigo-500 font-sans"
       >
       <svg class="w-4 h-4 text-zinc-400 absolute left-3.5 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
     </div>
   </div>
 
   <!-- MAIN SCROLLABLE BODY -->
-  <main class="flex-1 px-4 py-3.5 max-w-md mx-auto w-full safe-bottom space-y-4">
+  <main class="flex-1 px-4 pt-3 max-w-md mx-auto w-full safe-bottom-pad space-y-4">
 
     <!-- TAB 1: RADAR / ORDERS FEED -->
     <section id="tab-feed" class="space-y-4">
 
-      <!-- RADAR OPERATIONAL STATUS CARD (Inspired by Reference Hero Card with Color Block) -->
+      <!-- RADAR OPERATIONAL STATUS CARD -->
       <div id="operational-card" class="rounded-[28px] p-5 bg-[#FF5E54] text-zinc-950 shadow-xl shadow-red-500/10 space-y-3 relative overflow-hidden transition-all">
-        <!-- Top Row: Badge + Action Icon -->
         <div class="flex items-center justify-between">
           <div class="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-black/15 text-[10px] font-extrabold font-display uppercase tracking-wider text-zinc-950">
             <span class="w-1.5 h-1.5 rounded-full bg-black animate-ping"></span>
@@ -121,7 +117,6 @@
           </button>
         </div>
 
-        <!-- Metric Section: Volume & Active Delay -->
         <div>
           <p class="text-[11px] font-bold uppercase tracking-wider opacity-80 font-display">Рынок за 24 часа</p>
           <div class="flex items-baseline space-x-2">
@@ -132,7 +127,6 @@
           </div>
         </div>
 
-        <!-- Sub-Banner: Free vs Premium Warning -->
         <div class="pt-1 flex items-center justify-between border-t border-black/15 text-xs">
           <div>
             <p class="text-[10px] font-bold uppercase opacity-75">Режим отклика</p>
@@ -147,36 +141,48 @@
         </div>
       </div>
 
-      <!-- CATEGORY CHIP SELECTOR (Matches Pill Styles from Reference) -->
+      <!-- SPECIALTY & INTERESTS QUICK FILTER STRIP -->
       <div class="space-y-2">
         <div class="flex items-center justify-between text-xs font-display">
-          <h3 class="font-bold uppercase tracking-wider text-zinc-400 text-[11px]">Направления</h3>
-          <span class="text-[11px] text-zinc-500 font-medium cursor-pointer" onclick="navigateTo('filters')">Настроить фильтры ⚙️</span>
+          <div class="flex items-center space-x-1.5">
+            <h3 class="font-bold uppercase tracking-wider text-zinc-400 text-[11px]">Моя специальность</h3>
+            <span id="active-interests-counter" class="text-[10px] bg-indigo-500/20 text-indigo-400 px-1.5 py-0.2 rounded-full font-bold hidden">1</span>
+          </div>
+          <button onclick="toggleInterestsModal()" class="text-[11px] text-accent-lime font-bold hover:underline flex items-center space-x-1">
+            <span>⚙️ Настроить фильтр</span>
+          </button>
         </div>
 
+        <!-- Horizontal Scrollable Specialty Chips with Multi-Select -->
         <div class="flex space-x-2 overflow-x-auto no-scrollbar py-0.5 text-xs font-display font-bold">
-          <button onclick="selectCategory('all', this)" class="cat-pill px-4 py-2 rounded-full bg-white text-zinc-950 shadow-sm whitespace-nowrap transition-all">
-            Все (110)
+          <button onclick="toggleSpecialtyTag('all')" id="tag-btn-all" class="specialty-chip px-3.5 py-2 rounded-full bg-white text-zinc-950 shadow-sm whitespace-nowrap transition-all">
+            Все заказы (110)
           </button>
-          <button onclick="selectCategory('development', this)" class="cat-pill px-4 py-2 rounded-full bg-[#181820] border border-white/[0.08] text-zinc-300 hover:text-white whitespace-nowrap transition-all">
-            🐍 Python & Backend
+          <button onclick="toggleSpecialtyTag('python')" id="tag-btn-python" class="specialty-chip px-3.5 py-2 rounded-full bg-[#171720] border border-white/[0.08] text-zinc-300 hover:text-white whitespace-nowrap transition-all">
+            🐍 Python & Data
           </button>
-          <button onclick="selectCategory('bot', this)" class="cat-pill px-4 py-2 rounded-full bg-[#181820] border border-white/[0.08] text-zinc-300 hover:text-white whitespace-nowrap transition-all">
-            🤖 TG Боты
+          <button onclick="toggleSpecialtyTag('bot')" id="tag-btn-bot" class="specialty-chip px-3.5 py-2 rounded-full bg-[#171720] border border-white/[0.08] text-zinc-300 hover:text-white whitespace-nowrap transition-all">
+            🤖 TG Боты & TMA
           </button>
-          <button onclick="selectCategory('frontend', this)" class="cat-pill px-4 py-2 rounded-full bg-[#181820] border border-white/[0.08] text-zinc-300 hover:text-white whitespace-nowrap transition-all">
+          <button onclick="toggleSpecialtyTag('frontend')" id="tag-btn-frontend" class="specialty-chip px-3.5 py-2 rounded-full bg-[#171720] border border-white/[0.08] text-zinc-300 hover:text-white whitespace-nowrap transition-all">
             ⚛️ Frontend & Веб
           </button>
-          <button onclick="selectCategory('design', this)" class="cat-pill px-4 py-2 rounded-full bg-[#181820] border border-white/[0.08] text-zinc-300 hover:text-white whitespace-nowrap transition-all">
-            🎨 Дизайн & UI
+          <button onclick="toggleSpecialtyTag('mobile')" id="tag-btn-mobile" class="specialty-chip px-3.5 py-2 rounded-full bg-[#171720] border border-white/[0.08] text-zinc-300 hover:text-white whitespace-nowrap transition-all">
+            📱 Мобильные (Flutter/iOS)
+          </button>
+          <button onclick="toggleSpecialtyTag('design')" id="tag-btn-design" class="specialty-chip px-3.5 py-2 rounded-full bg-[#171720] border border-white/[0.08] text-zinc-300 hover:text-white whitespace-nowrap transition-all">
+            🎨 Дизайн & UI/UX
+          </button>
+          <button onclick="toggleSpecialtyTag('copy')" id="tag-btn-copy" class="specialty-chip px-3.5 py-2 rounded-full bg-[#171720] border border-white/[0.08] text-zinc-300 hover:text-white whitespace-nowrap transition-all">
+            📝 Тексты & SMM
           </button>
         </div>
       </div>
 
-      <!-- ORDERS LIST CONTAINER (Styled after Reference Item Cards) -->
+      <!-- ORDERS LIST CONTAINER -->
       <div class="space-y-2.5 pt-1">
         <div class="flex items-center justify-between text-[11px] font-display font-bold text-zinc-400">
-          <span id="orders-count-label">50 заказов готово к отклику</span>
+          <span id="orders-count-label">Загрузка заказов...</span>
           <span class="text-emerald-400">● Live поток</span>
         </div>
 
@@ -187,10 +193,8 @@
 
     </section>
 
-    <!-- TAB 2: MARKET ANALYTICS (Matches Reference: Capacity & Growth Screens) -->
+    <!-- TAB 2: MARKET ANALYTICS -->
     <section id="tab-analytics" class="hidden space-y-4">
-      
-      <!-- HERO ANALYTICS CARD (Indigo / Periwinkle theme from Reference) -->
       <div class="rounded-[28px] p-5 bg-[#5865F2] text-white shadow-xl space-y-4 relative overflow-hidden">
         <div class="flex items-center justify-between">
           <span class="text-[10px] font-extrabold uppercase tracking-wider bg-black/20 px-2.5 py-1 rounded-full font-display">
@@ -210,7 +214,7 @@
           <p class="text-xs font-medium text-indigo-100 mt-1">Средний чек одного заказа: <b>32,500 ₽</b></p>
         </div>
 
-        <!-- Weekly Bar Chart (Exact match from Reference) -->
+        <!-- Weekly Bar Chart -->
         <div class="pt-3 border-t border-white/15">
           <div class="flex items-end justify-between h-24 px-1 pb-2 border-b border-white/20">
             <div class="flex flex-col items-center space-y-1">
@@ -248,40 +252,37 @@
         </div>
       </div>
 
-      <!-- OVERLAPPING CATEGORY CARDS (Inspired by Reference "HIGH-VOLUME / SMALL EATERY") -->
+      <!-- Marginality Ranking -->
       <div class="space-y-2.5">
         <h3 class="text-xs font-extrabold font-display uppercase tracking-wider text-zinc-400">Рейтинг маржинальности</h3>
 
-        <!-- Card 1: Telegram Bots -->
         <div class="rounded-[24px] p-4 bg-[#FFD15C] text-zinc-950 flex items-center justify-between shadow-sm">
           <div>
             <span class="text-[9px] font-extrabold uppercase tracking-wider bg-black/10 px-2 py-0.5 rounded font-display">ТОП СПРОС</span>
             <h4 class="text-base font-black font-display tracking-tight mt-1">Telegram Mini Apps & Боты</h4>
             <p class="text-xs font-semibold opacity-80 mt-0.5">Средний чек: 35,000 ₽ • Скорость закрытия: 48ч</p>
           </div>
-          <button onclick="selectCategory('bot')" class="w-9 h-9 rounded-full bg-black text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
+          <button onclick="setSpecialtyFromAnalytics('bot')" class="w-9 h-9 rounded-full bg-black text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
             ↗
           </button>
         </div>
 
-        <!-- Card 2: Python / AI Automations -->
         <div class="rounded-[24px] p-4 bg-[#C6E2D1] text-zinc-950 flex items-center justify-between shadow-sm">
           <div>
             <span class="text-[9px] font-extrabold uppercase tracking-wider bg-black/10 px-2 py-0.5 rounded font-display">БЫСТРЫЙ ЧЕК</span>
             <h4 class="text-base font-black font-display tracking-tight mt-1">Парсеры данных & AI-скрипты</h4>
             <p class="text-xs font-semibold opacity-80 mt-0.5">Средний чек: 20,000 ₽ • Цикл сделки: 24ч</p>
           </div>
-          <button onclick="selectCategory('development')" class="w-9 h-9 rounded-full bg-black text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
+          <button onclick="setSpecialtyFromAnalytics('python')" class="w-9 h-9 rounded-full bg-black text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
             ↗
           </button>
         </div>
       </div>
-
     </section>
 
-    <!-- TAB 3: FILTERS & BLACKLIST (Matches Reference Form Controls) -->
+    <!-- TAB 3: CUSTOM FILTERS & BLACKLIST -->
     <section id="tab-filters" class="hidden space-y-4">
-      <div class="rounded-[28px] p-5 bg-[#181820] border border-white/[0.08] shadow-sm space-y-5">
+      <div class="rounded-[28px] p-5 bg-[#171720] border border-white/[0.08] shadow-sm space-y-5">
         <div>
           <div class="flex items-center justify-between">
             <h3 class="text-sm font-extrabold font-display uppercase tracking-wider text-zinc-200">🔍 Ключевые слова</h3>
@@ -292,7 +293,7 @@
             id="filter-keywords" 
             rows="3" 
             placeholder="python, fastapi, react, telegram бот, парсер, flutter" 
-            class="w-full mt-2.5 bg-[#0F0F14] border border-white/[0.1] rounded-2xl p-3.5 text-xs text-white font-mono outline-none focus:border-indigo-500 transition-all placeholder:text-zinc-600"
+            class="w-full mt-2.5 bg-[#0D0D12] border border-white/[0.1] rounded-2xl p-3.5 text-xs text-white font-mono outline-none focus:border-indigo-500 transition-all placeholder:text-zinc-600"
           ></textarea>
         </div>
 
@@ -306,7 +307,7 @@
             id="filter-stopwords" 
             rows="2" 
             placeholder="диплом, курсовая, бесплатно, бартер, процент от продаж" 
-            class="w-full mt-2.5 bg-[#0F0F14] border border-white/[0.1] rounded-2xl p-3.5 text-xs text-white font-mono outline-none focus:border-indigo-500 transition-all placeholder:text-zinc-600"
+            class="w-full mt-2.5 bg-[#0D0D12] border border-white/[0.1] rounded-2xl p-3.5 text-xs text-white font-mono outline-none focus:border-indigo-500 transition-all placeholder:text-zinc-600"
           ></textarea>
         </div>
 
@@ -319,10 +320,8 @@
       </div>
     </section>
 
-    <!-- TAB 4: PREMIUM & REFERRALS (Matches Reference Cards) -->
+    <!-- TAB 4: PREMIUM & REFERRALS -->
     <section id="tab-premium" class="hidden space-y-4">
-      
-      <!-- Premium Membership Card -->
       <div class="rounded-[28px] p-6 bg-gradient-to-br from-[#1E1E28] to-[#121218] border border-white/[0.12] shadow-2xl space-y-4 relative overflow-hidden">
         <div class="absolute -right-12 -top-12 w-48 h-48 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
 
@@ -363,8 +362,7 @@
         </div>
       </div>
 
-      <!-- Referral Free Card -->
-      <div class="rounded-[28px] p-5 bg-[#181820] border border-white/[0.08] shadow-sm space-y-4">
+      <div class="rounded-[28px] p-5 bg-[#171720] border border-white/[0.08] shadow-sm space-y-4">
         <div class="flex items-center justify-between">
           <div>
             <h3 class="text-sm font-extrabold font-display text-white">Пригласи коллегу</h3>
@@ -381,7 +379,7 @@
             type="text" 
             id="ref-link-input" 
             readonly 
-            class="w-full bg-[#0F0F14] border border-white/[0.1] rounded-xl px-3 py-2 text-xs font-mono text-zinc-300 outline-none truncate"
+            class="w-full bg-[#0D0D12] border border-white/[0.1] rounded-xl px-3 py-2 text-xs font-mono text-zinc-300 outline-none truncate"
           >
           <button onclick="copyRefLink()" class="px-3.5 py-2 bg-white text-zinc-950 rounded-xl text-xs font-bold font-display whitespace-nowrap active:scale-95 transition-all">
             Копия
@@ -395,45 +393,97 @@
           <span>📢 Поделиться с другом в Telegram</span>
         </button>
       </div>
-
     </section>
 
   </main>
 
-  <!-- FLOATING NAVIGATION DOCK (Exact Icon & Pill Structure from Reference) -->
-  <nav class="fixed bottom-0 left-0 right-0 z-40 bg-[#0F0F14]/90 backdrop-blur-2xl border-t border-white/[0.06] px-6 py-2.5 safe-bottom flex justify-around items-center">
-    <!-- 1. Radar / Feed -->
-    <button onclick="navigateTo('feed')" id="nav-btn-feed" class="flex flex-col items-center text-white transition-all">
-      <div class="w-10 h-8 rounded-full bg-white/[0.12] flex items-center justify-center transition-all" id="nav-pill-feed">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-      </div>
-      <span class="text-[9px] font-extrabold font-display mt-1">Радар</span>
-    </button>
+  <!-- FLOATING ISLAND NAVIGATION DOCK (Detached island with auto-hide on scroll) -->
+  <div class="fixed bottom-4 inset-x-4 max-w-xs mx-auto z-50 pointer-events-none transition-all duration-300" id="island-nav-wrapper">
+    <nav class="pointer-events-auto bg-[#171720]/95 backdrop-blur-2xl border border-white/[0.12] rounded-full px-5 py-2.5 shadow-[0_12px_40px_rgba(0,0,0,0.65)] flex justify-between items-center transition-all duration-300" id="island-nav">
+      <!-- 1. Radar / Feed -->
+      <button onclick="navigateTo('feed')" id="nav-btn-feed" class="flex flex-col items-center text-white transition-all">
+        <div class="w-9 h-7 rounded-full bg-white/[0.15] flex items-center justify-center transition-all" id="nav-pill-feed">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+        </div>
+        <span class="text-[9px] font-extrabold font-display mt-0.5">Радар</span>
+      </button>
 
-    <!-- 2. Analytics -->
-    <button onclick="navigateTo('analytics')" id="nav-btn-analytics" class="flex flex-col items-center text-zinc-500 hover:text-zinc-300 transition-all">
-      <div class="w-10 h-8 rounded-full flex items-center justify-center transition-all" id="nav-pill-analytics">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-      </div>
-      <span class="text-[9px] font-extrabold font-display mt-1">Рынок</span>
-    </button>
+      <!-- 2. Analytics -->
+      <button onclick="navigateTo('analytics')" id="nav-btn-analytics" class="flex flex-col items-center text-zinc-500 hover:text-zinc-300 transition-all">
+        <div class="w-9 h-7 rounded-full flex items-center justify-center transition-all" id="nav-pill-analytics">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+        </div>
+        <span class="text-[9px] font-extrabold font-display mt-0.5">Рынок</span>
+      </button>
 
-    <!-- 3. Filters -->
-    <button onclick="navigateTo('filters')" id="nav-btn-filters" class="flex flex-col items-center text-zinc-500 hover:text-zinc-300 transition-all">
-      <div class="w-10 h-8 rounded-full flex items-center justify-center transition-all" id="nav-pill-filters">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
-      </div>
-      <span class="text-[9px] font-extrabold font-display mt-1">Фильтры</span>
-    </button>
+      <!-- 3. Filters -->
+      <button onclick="navigateTo('filters')" id="nav-btn-filters" class="flex flex-col items-center text-zinc-500 hover:text-zinc-300 transition-all">
+        <div class="w-9 h-7 rounded-full flex items-center justify-center transition-all" id="nav-pill-filters">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+        </div>
+        <span class="text-[9px] font-extrabold font-display mt-0.5">Фильтры</span>
+      </button>
 
-    <!-- 4. Premium -->
-    <button onclick="navigateTo('premium')" id="nav-btn-premium" class="flex flex-col items-center text-zinc-500 hover:text-zinc-300 transition-all">
-      <div class="w-10 h-8 rounded-full flex items-center justify-center transition-all" id="nav-pill-premium">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+      <!-- 4. Premium -->
+      <button onclick="navigateTo('premium')" id="nav-btn-premium" class="flex flex-col items-center text-zinc-500 hover:text-zinc-300 transition-all">
+        <div class="w-9 h-7 rounded-full flex items-center justify-center transition-all" id="nav-pill-premium">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+        </div>
+        <span class="text-[9px] font-extrabold font-display mt-0.5">Тариф</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- INTERESTS MODAL DRAWER (Configure Specialties in 1 Tap) -->
+  <div id="interests-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-end justify-center transition-opacity">
+    <div class="w-full max-w-md bg-[#171720] border-t border-white/10 rounded-t-[32px] p-6 space-y-5 animate-slide-up shadow-2xl">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-base font-black font-display text-white">Мои специальности и интересы</h3>
+          <p class="text-xs text-zinc-400 mt-0.5">Выберите свои навыки для точного отбора заказов</p>
+        </div>
+        <button onclick="toggleInterestsModal()" class="w-8 h-8 rounded-full bg-white/10 text-white flex items-center justify-center font-bold text-xs">
+          ✕
+        </button>
       </div>
-      <span class="text-[9px] font-extrabold font-display mt-1">Тариф</span>
-    </button>
-  </nav>
+
+      <div class="grid grid-cols-2 gap-2.5 pt-1 text-xs font-display font-bold" id="modal-interests-grid">
+        <button onclick="toggleModalSpecialty('python')" id="modal-tag-python" class="p-3.5 rounded-2xl bg-[#0D0D12] border border-white/10 text-left flex flex-col justify-between h-20 transition-all">
+          <span class="text-lg">🐍</span>
+          <span>Python & Data</span>
+        </button>
+        <button onclick="toggleModalSpecialty('bot')" id="modal-tag-bot" class="p-3.5 rounded-2xl bg-[#0D0D12] border border-white/10 text-left flex flex-col justify-between h-20 transition-all">
+          <span class="text-lg">🤖</span>
+          <span>TG Боты & TMA</span>
+        </button>
+        <button onclick="toggleModalSpecialty('frontend')" id="modal-tag-frontend" class="p-3.5 rounded-2xl bg-[#0D0D12] border border-white/10 text-left flex flex-col justify-between h-20 transition-all">
+          <span class="text-lg">⚛️</span>
+          <span>Frontend & Веб</span>
+        </button>
+        <button onclick="toggleModalSpecialty('mobile')" id="modal-tag-mobile" class="p-3.5 rounded-2xl bg-[#0D0D12] border border-white/10 text-left flex flex-col justify-between h-20 transition-all">
+          <span class="text-lg">📱</span>
+          <span>Flutter & Mobile</span>
+        </button>
+        <button onclick="toggleModalSpecialty('design')" id="modal-tag-design" class="p-3.5 rounded-2xl bg-[#0D0D12] border border-white/10 text-left flex flex-col justify-between h-20 transition-all">
+          <span class="text-lg">🎨</span>
+          <span>Дизайн & UI/UX</span>
+        </button>
+        <button onclick="toggleModalSpecialty('copy')" id="modal-tag-copy" class="p-3.5 rounded-2xl bg-[#0D0D12] border border-white/10 text-left flex flex-col justify-between h-20 transition-all">
+          <span class="text-lg">📝</span>
+          <span>Тексты & SMM</span>
+        </button>
+      </div>
+
+      <div class="pt-2 flex space-x-2">
+        <button onclick="resetAllInterests()" class="w-1/3 py-3.5 bg-white/5 border border-white/10 text-zinc-300 font-bold font-display text-xs rounded-2xl active:scale-95 transition-all">
+          Сбросить
+        </button>
+        <button onclick="applyInterestsAndClose()" class="w-2/3 py-3.5 bg-white text-zinc-950 font-black font-display text-xs rounded-2xl shadow-lg active:scale-95 transition-all">
+          Применить фильтр
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Notification Toast -->
   <div id="toast-el" class="fixed top-14 left-1/2 -translate-x-1/2 z-50 bg-white text-zinc-950 font-display font-extrabold px-4 py-2 rounded-full text-xs shadow-2xl opacity-0 pointer-events-none transition-all duration-300">
@@ -456,17 +506,28 @@
     }
 
     const userId = tg?.initDataUnsafe?.user?.id || 999999999;
-    let selectedCategory = 'all';
+    let rawLeads = [];
+    let selectedSpecialties = new Set(); // Stores active interest tags (e.g. 'python', 'bot')
     let userReferralUrl = '';
+
+    // SPECIALTY KEYWORDS DICTIONARY
+    const SPECIALTY_KEYWORDS = {
+      python: ['python', 'питон', 'парсер', 'парсинг', 'django', 'fastapi', 'flask', 'скрипт', 'ai', 'нейросет', 'data'],
+      bot: ['бот', 'bot', 'telegram', 'телеграм', 'тг', 'tma', 'mini app', 'мини апп'],
+      frontend: ['react', 'vue', 'next', 'frontend', 'фронтенд', 'верстка', 'html', 'css', 'landing', 'лендинг', 'tilda', 'тильда', 'сайт', 'веб-сайт', 'web'],
+      mobile: ['flutter', 'флаттер', 'react native', 'ios', 'android', 'swift', 'kotlin', 'мобильн'],
+      design: ['дизайн', 'дизайнер', 'figma', 'фигма', 'ui', 'ux', 'баннер', 'логотип', 'макет', 'иллюстрац', 'интерфейс'],
+      copy: ['текст', 'копирайт', 'стать', 'перевод', 'smm', 'рерайт', 'контент', 'seo']
+    };
 
     function showToast(text) {
       const el = document.getElementById('toast-el');
       el.textContent = text;
       el.classList.remove('opacity-0', 'pointer-events-none');
-      setTimeout(() => el.classList.add('opacity-0', 'pointer-events-none'), 2200);
+      setTimeout(() => el.classList.add('opacity-0', 'pointer-events-none'), 2000);
     }
 
-    function toggleSearchInput() {
+    function toggleSearchBar() {
       const wrap = document.getElementById('search-bar-wrap');
       wrap.classList.toggle('hidden');
       if (!wrap.classList.contains('hidden')) {
@@ -474,87 +535,243 @@
       }
     }
 
-    function switchSourcePill() {
-      showToast('Мониторинг бирж: FL.ru + Freelancehunt активен');
-    }
+    // INTERACTION: FLOATING ISLAND AUTO-HIDE ON SCROLL
+    let lastScrollPosition = 0;
+    const islandNavWrapper = document.getElementById('island-nav-wrapper');
 
+    window.addEventListener('scroll', () => {
+      // Only auto-hide on the main feed tab
+      if (document.getElementById('tab-feed').classList.contains('hidden')) {
+        islandNavWrapper.classList.remove('translate-y-24', 'opacity-0');
+        return;
+      }
+
+      const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
+      
+      // Scrolling DOWN -> hide island dock
+      if (currentScroll > lastScrollPosition && currentScroll > 80) {
+        islandNavWrapper.classList.add('translate-y-24', 'opacity-0');
+      } 
+      // Scrolling UP -> reveal island dock
+      else {
+        islandNavWrapper.classList.remove('translate-y-24', 'opacity-0');
+      }
+      
+      lastScrollPosition = Math.max(0, currentScroll);
+    }, { passive: true });
+
+    // NAVIGATION TABS
     function navigateTo(tabName) {
       tg?.HapticFeedback?.selectionChanged();
+      islandNavWrapper.classList.remove('translate-y-24', 'opacity-0');
+
       ['feed', 'analytics', 'filters', 'premium'].forEach(t => {
         document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tabName);
         const btn = document.getElementById(`nav-btn-${t}`);
         const pill = document.getElementById(`nav-pill-${t}`);
         if (t === tabName) {
           btn.className = 'flex flex-col items-center text-white transition-all';
-          pill.className = 'w-10 h-8 rounded-full bg-white/[0.12] flex items-center justify-center transition-all';
+          pill.className = 'w-9 h-7 rounded-full bg-white/[0.15] flex items-center justify-center transition-all';
         } else {
           btn.className = 'flex flex-col items-center text-zinc-500 hover:text-zinc-300 transition-all';
-          pill.className = 'w-10 h-8 rounded-full flex items-center justify-center transition-all';
+          pill.className = 'w-9 h-7 rounded-full flex items-center justify-center transition-all';
         }
       });
+
       if (tabName === 'feed') renderFeed();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    function selectCategory(cat, btn) {
+    // SPECIALTY & INTEREST FILTERS
+    function toggleSpecialtyTag(tag) {
       tg?.HapticFeedback?.selectionChanged();
-      selectedCategory = cat;
-      if (btn) {
-        document.querySelectorAll('.cat-pill').forEach(b => {
-          b.className = 'cat-pill px-4 py-2 rounded-full bg-[#181820] border border-white/[0.08] text-zinc-300 hover:text-white whitespace-nowrap transition-all';
-        });
-        btn.className = 'cat-pill px-4 py-2 rounded-full bg-white text-zinc-950 shadow-sm whitespace-nowrap transition-all';
+      if (tag === 'all') {
+        selectedSpecialties.clear();
+      } else {
+        if (selectedSpecialties.has(tag)) {
+          selectedSpecialties.delete(tag);
+        } else {
+          selectedSpecialties.add(tag);
+        }
       }
+      syncSpecialtyUI();
       renderFeed();
     }
 
-    async function renderFeed() {
-      const listEl = document.getElementById('leads-list');
-      const searchVal = document.getElementById('search-input').value;
-
-      try {
-        const res = await fetch(`/api/leads?category=${selectedCategory}&search=${encodeURIComponent(searchVal)}`);
-        const data = await res.json();
-
-        if (!data.leads || data.leads.length === 0) {
-          listEl.innerHTML = `<div class="py-16 text-center text-xs text-zinc-500">Заказов по заданным критериям не найдено</div>`;
-          return;
-        }
-
-        document.getElementById('orders-count-label').textContent = `${data.leads.length} заказов готово к отклику`;
-
-        listEl.innerHTML = data.leads.map(lead => {
-          const isFl = lead.source === 'fl_ru';
-          const badgeBg = isFl ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30';
-          const badgeLabel = isFl ? 'FL.ru' : 'Freelancehunt';
-
-          return `
-            <div onclick="openLead('${lead.url}')" class="rounded-[24px] p-4 bg-[#181820] border border-white/[0.06] hover:border-white/[0.15] shadow-md transition-all active:scale-[0.99] cursor-pointer space-y-2.5">
-              <div class="flex items-center justify-between">
-                <span class="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full font-display uppercase tracking-wider ${badgeBg}">
-                  ${badgeLabel}
-                </span>
-                <span class="text-xs font-black font-display text-white bg-white/[0.08] px-2.5 py-1 rounded-xl">
-                  💰 ${lead.budget}
-                </span>
-              </div>
-
-              <div>
-                <h4 class="text-xs font-bold font-display text-zinc-100 line-clamp-2 leading-snug">${lead.title}</h4>
-                <p class="text-[11px] text-zinc-400 mt-1 line-clamp-2 leading-relaxed font-sans">${lead.description}</p>
-              </div>
-
-              <div class="pt-1 flex items-center justify-between border-t border-white/[0.04]">
-                <span class="text-[10px] text-zinc-500 font-medium font-sans">⚡ Только что • 0 откликов</span>
-                <button onclick="openLead('${lead.url}')" class="w-8 h-8 rounded-full bg-white text-zinc-950 flex items-center justify-center font-bold text-xs hover:bg-[#98FF3A] active:scale-95 transition-all">
-                  ↗
-                </button>
-              </div>
-            </div>
-          `;
-        }).join('');
-      } catch (err) {
-        console.error(err);
+    function toggleModalSpecialty(tag) {
+      tg?.HapticFeedback?.selectionChanged();
+      if (selectedSpecialties.has(tag)) {
+        selectedSpecialties.delete(tag);
+      } else {
+        selectedSpecialties.add(tag);
       }
+      updateModalTagUI();
+    }
+
+    function updateModalTagUI() {
+      const allTags = ['python', 'bot', 'frontend', 'mobile', 'design', 'copy'];
+      allTags.forEach(t => {
+        const btn = document.getElementById(`modal-tag-${t}`);
+        if (selectedSpecialties.has(t)) {
+          btn.className = 'p-3.5 rounded-2xl bg-indigo-600 text-white border border-indigo-400 text-left flex flex-col justify-between h-20 shadow-lg shadow-indigo-500/20';
+        } else {
+          btn.className = 'p-3.5 rounded-2xl bg-[#0D0D12] border border-white/10 text-left flex flex-col justify-between h-20 transition-all';
+        }
+      });
+    }
+
+    function syncSpecialtyUI() {
+      const allTags = ['python', 'bot', 'frontend', 'mobile', 'design', 'copy'];
+      const allBtn = document.getElementById('tag-btn-all');
+      const counterEl = document.getElementById('active-interests-counter');
+      const dotEl = document.getElementById('interests-active-dot');
+
+      if (selectedSpecialties.size === 0) {
+        allBtn.className = 'specialty-chip px-3.5 py-2 rounded-full bg-white text-zinc-950 shadow-sm whitespace-nowrap transition-all font-display font-bold';
+        counterEl.classList.add('hidden');
+        dotEl.classList.add('hidden');
+      } else {
+        allBtn.className = 'specialty-chip px-3.5 py-2 rounded-full bg-[#171720] border border-white/[0.08] text-zinc-300 hover:text-white whitespace-nowrap transition-all font-display font-bold';
+        counterEl.textContent = selectedSpecialties.size;
+        counterEl.classList.remove('hidden');
+        dotEl.classList.remove('hidden');
+      }
+
+      allTags.forEach(t => {
+        const btn = document.getElementById(`tag-btn-${t}`);
+        if (btn) {
+          if (selectedSpecialties.has(t)) {
+            btn.className = 'specialty-chip px-3.5 py-2 rounded-full bg-indigo-600 text-white border border-indigo-400 whitespace-nowrap transition-all shadow-md font-display font-bold';
+          } else {
+            btn.className = 'specialty-chip px-3.5 py-2 rounded-full bg-[#171720] border border-white/[0.08] text-zinc-300 hover:text-white whitespace-nowrap transition-all font-display font-bold';
+          }
+        }
+      });
+      updateModalTagUI();
+    }
+
+    function toggleInterestsModal() {
+      tg?.HapticFeedback?.impactOccurred('light');
+      const modal = document.getElementById('interests-modal');
+      modal.classList.toggle('hidden');
+      updateModalTagUI();
+    }
+
+    function resetAllInterests() {
+      selectedSpecialties.clear();
+      syncSpecialtyUI();
+      renderFeed();
+      toggleInterestsModal();
+      showToast('Фильтры сброшены');
+    }
+
+    function applyInterestsAndClose() {
+      syncSpecialtyUI();
+      renderFeed();
+      toggleInterestsModal();
+      showToast(selectedSpecialties.size > 0 ? `Выбрано специальностей: ${selectedSpecialties.size}` : 'Отображаются все заказы');
+    }
+
+    function setSpecialtyFromAnalytics(spec) {
+      selectedSpecialties.clear();
+      selectedSpecialties.add(spec);
+      syncSpecialtyUI();
+      navigateTo('feed');
+    }
+
+    // CHECK IF LEAD MATCHES SELECTED INTERESTS
+    function leadMatchesSelectedInterests(lead) {
+      if (selectedSpecialties.size === 0) return true;
+
+      const fullText = `${lead.title} ${lead.description}`.toLowerCase();
+
+      for (const spec of selectedSpecialties) {
+        const keywords = SPECIALTY_KEYWORDS[spec];
+        if (keywords) {
+          for (const kw of keywords) {
+            if (fullText.includes(kw)) {
+              return true;
+            }
+          }
+        }
+      }
+      return false;
+    }
+
+    // LOAD & RENDER LEADS
+    async function fetchLeads() {
+      try {
+        const res = await fetch('/api/leads?limit=100');
+        const data = await res.json();
+        if (data.ok && data.leads) {
+          rawLeads = data.leads;
+          renderFeed();
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function renderFeed() {
+      const listEl = document.getElementById('leads-list');
+      const searchVal = document.getElementById('search-input').value.trim().toLowerCase();
+
+      let filtered = rawLeads.filter(lead => {
+        // 1. Search text filter
+        if (searchVal) {
+          const text = `${lead.title} ${lead.description}`.toLowerCase();
+          if (!text.includes(searchVal)) return false;
+        }
+        // 2. Specialty & Interest filter
+        return leadMatchesSelectedInterests(lead);
+      });
+
+      document.getElementById('orders-count-label').textContent = `${filtered.length} заказов по вашим интересам`;
+
+      if (filtered.length === 0) {
+        listEl.innerHTML = `
+          <div class="py-14 text-center space-y-2">
+            <span class="text-3xl">🔍</span>
+            <p class="text-xs font-bold font-display text-zinc-300">Заказов по выбранным интересам не найдено</p>
+            <p class="text-[11px] text-zinc-500">Попробуйте включить дополнительные специальности в фильтре</p>
+            <button onclick="resetAllInterests()" class="mt-2 px-4 py-2 bg-white/10 text-white rounded-full text-xs font-bold font-display">
+              Сбросить фильтр
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      listEl.innerHTML = filtered.map(lead => {
+        const isFl = lead.source === 'fl_ru';
+        const badgeBg = isFl ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30';
+        const badgeLabel = isFl ? 'FL.ru' : 'Freelancehunt';
+
+        return `
+          <div onclick="openLead('${lead.url}')" class="rounded-[24px] p-4 bg-[#171720] border border-white/[0.06] hover:border-white/[0.15] shadow-md transition-all active:scale-[0.99] cursor-pointer space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full font-display uppercase tracking-wider ${badgeBg}">
+                ${badgeLabel}
+              </span>
+              <span class="text-xs font-black font-display text-white bg-white/[0.08] px-2.5 py-1 rounded-xl">
+                💰 ${lead.budget}
+              </span>
+            </div>
+
+            <div>
+              <h4 class="text-xs font-bold font-display text-zinc-100 line-clamp-2 leading-snug">${lead.title}</h4>
+              <p class="text-[11px] text-zinc-400 mt-1 line-clamp-2 leading-relaxed font-sans">${lead.description}</p>
+            </div>
+
+            <div class="pt-1 flex items-center justify-between border-t border-white/[0.04]">
+              <span class="text-[10px] text-zinc-500 font-medium font-sans">⚡ Только что • 0 откликов</span>
+              <button onclick="openLead('${lead.url}')" class="w-8 h-8 rounded-full bg-white text-zinc-950 flex items-center justify-center font-bold text-xs hover:bg-[#98FF3A] active:scale-95 transition-all">
+                ↗
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
     }
 
     function openLead(url) {
@@ -566,6 +783,7 @@
       }
     }
 
+    // LOAD PROFILE & CONFIG
     async function loadUserData() {
       try {
         const res = await fetch(`/api/user/${userId}`);
@@ -657,13 +875,14 @@
       }
     }
 
-    let searchDebounce;
+    let searchTimer;
     document.getElementById('search-input').addEventListener('input', () => {
-      clearTimeout(searchDebounce);
-      searchDebounce = setTimeout(renderFeed, 250);
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(renderFeed, 200);
     });
 
-    renderFeed();
+    // Initial load
+    fetchLeads();
     loadUserData();
   </script>
 </body>
