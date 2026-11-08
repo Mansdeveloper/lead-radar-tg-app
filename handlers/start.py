@@ -1,0 +1,66 @@
+from aiogram import Router
+from aiogram.filters import CommandStart
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
+
+from config import settings
+from database.crud import get_or_create_user
+
+router = Router()
+
+
+@router.message(CommandStart())
+async def cmd_start(message: Message):
+    user_id = message.from_user.id
+    username = message.from_user.username
+
+    # Parse referral code from /start ref_<id>
+    referred_by = None
+    if message.text and len(message.text.split()) > 1:
+        param = message.text.split()[1]
+        if param.startswith("ref_"):
+            try:
+                ref_id = int(param.replace("ref_", ""))
+                if ref_id != user_id:
+                    referred_by = ref_id
+            except ValueError:
+                pass
+
+    user, created = await get_or_create_user(
+        telegram_id=user_id,
+        username=username,
+        referred_by=referred_by,
+    )
+
+    welcome_text = (
+        "👋 <b>Добро пожаловать в Lead Radar!</b>\n\n"
+        "⚡ <b>Что делает бот:</b>\n"
+        "В реальном времени сканирует биржи фриланса (Хабр Фриланс, FL.ru) и присылает горячие заказы "
+        "прямо вам в Telegram за пару секунд с момента их публикации заказчиком.\n\n"
+        "🎯 <b>Во фрилансе побеждает первый:</b> отклик в первые 3 минуты повышает вероятность взять заказ на 80%.\n\n"
+        "📊 <b>Ваш текущий тариф:</b> FREE\n"
+        f"• До {settings.FREE_MAX_DAILY_LEADS} лидов в день\n"
+        f"• Доставка с задержкой {settings.FREE_DELAY_SECONDS // 60} минут\n\n"
+        "🚀 <i>Хотите мгновенные уведомления без задержки и безлимит?</i>\n"
+        "Оформите <b>Premium</b> или пригласите коллегу по реферальной ссылке и получите <b>+7 дней Premium бесплатно</b>!"
+    )
+
+    buttons = []
+    if settings.WEBAPP_URL:
+        from aiogram.types import WebAppInfo
+        buttons.append(
+            [InlineKeyboardButton(text="📱 Открыть Mini App", web_app=WebAppInfo(url=settings.WEBAPP_URL))]
+        )
+
+    buttons.extend([
+        [
+            InlineKeyboardButton(text="🎯 Настроить фильтры", callback_data="open_filters"),
+            InlineKeyboardButton(text="⚡ Включить Premium", callback_data="buy_premium"),
+        ],
+        [
+            InlineKeyboardButton(text="👤 Мой профиль / Рефералы", callback_data="open_profile"),
+        ],
+    ])
+
+    keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
+
+    await message.answer(welcome_text, parse_mode="HTML", reply_markup=keyboard)

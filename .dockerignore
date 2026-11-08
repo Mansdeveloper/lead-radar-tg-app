@@ -1,0 +1,5 @@
+.env
+lead_radar.db
+.git
+__pycache__
+*.pyc
