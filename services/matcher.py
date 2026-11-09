@@ -6,6 +6,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from config import settings
 from database.crud import (
     can_send_free_lead,
+    compute_user_status,
     get_all_subscribers_with_filters,
     get_user_status,
 )
@@ -109,7 +110,7 @@ async def dispatch_lead(bot: Bot, lead: RawLead) -> None:
         if not matches_filter(lead_text, user_filter.keywords, user_filter.stop_words):
             continue
 
-        status = await get_user_status(user.telegram_id)
+        status = compute_user_status(user)
 
         if status["has_instant_delivery"]:
             # Send immediately! (either Premium or 24h Welcome Trial)

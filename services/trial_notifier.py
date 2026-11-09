@@ -47,15 +47,19 @@ class TrialNotifier:
             inline_keyboard=[
                 [
                     InlineKeyboardButton(
-                        text="⭐️ Включить Premium (250 Stars)",
-                        callback_data="buy_premium",
+                        text="⭐️ Оплатить Premium (250 Stars)",
+                        callback_data="pay_stars",
                     )
                 ],
                 [
                     InlineKeyboardButton(
-                        text="👥 Получить +7 дней за коллегу",
+                        text="💎 Подробнее о тарифе",
+                        callback_data="buy_premium",
+                    ),
+                    InlineKeyboardButton(
+                        text="👥 +7 дней за друга",
                         callback_data="open_profile",
-                    )
+                    ),
                 ],
             ]
         )
@@ -73,5 +77,9 @@ class TrialNotifier:
                 logger.warning(
                     f"Failed to send trial expiration notification to {user.telegram_id}: {e}"
                 )
-            finally:
+            try:
                 await mark_trial_expired_notified(user.telegram_id)
+            except Exception as e:
+                logger.error(
+                    f"Failed to mark user {user.telegram_id} as trial_expired_notified: {e}"
+                )

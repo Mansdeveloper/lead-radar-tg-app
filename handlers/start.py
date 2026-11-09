@@ -1,6 +1,6 @@
-from aiogram import Router
+from aiogram import F, Router
 from aiogram.filters import CommandStart
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
+from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message, WebAppInfo
 
 from config import settings
 from database.crud import get_or_create_user, get_user_status
@@ -8,15 +8,15 @@ from database.crud import get_or_create_user, get_user_status
 router = Router()
 
 
-@router.message(CommandStart())
-async def cmd_start(message: Message):
-    user_id = message.from_user.id
-    username = message.from_user.username
+async def render_welcome(event: Message | CallbackQuery):
+    user = event.from_user
+    user_id = user.id
+    username = user.username
 
-    # Parse referral code from /start ref_<id>
+    # Parse referral code from /start ref_<id> if it's a Message
     referred_by = None
-    if message.text and len(message.text.split()) > 1:
-        param = message.text.split()[1]
+    if isinstance(event, Message) and event.text and len(event.text.split()) > 1:
+        param = event.text.split()[1]
         if param.startswith("ref_"):
             try:
                 ref_id = int(param.replace("ref_", ""))
@@ -25,7 +25,7 @@ async def cmd_start(message: Message):
             except ValueError:
                 pass
 
-    user, created = await get_or_create_user(
+    db_user, created = await get_or_create_user(
         telegram_id=user_id,
         username=username,
         referred_by=referred_by,
@@ -66,15 +66,16 @@ async def cmd_start(message: Message):
 
     buttons = []
     if settings.WEBAPP_URL:
-        from aiogram.types import WebAppInfo
         buttons.append(
             [InlineKeyboardButton(text="📱 Открыть Mini App", web_app=WebAppInfo(url=settings.WEBAPP_URL))]
         )
 
+    prem_btn_text = "⚡ Закрепить 0 сек" if status["is_trial"] else "⚡ Включить Premium"
+
     buttons.extend([
         [
             InlineKeyboardButton(text="🎯 Настроить фильтры", callback_data="open_filters"),
-            InlineKeyboardButton(text="⚡ Включить Premium", callback_data="buy_premium"),
+            InlineKeyboardButton(text=prem_btn_text, callback_data="buy_premium"),
         ],
         [
             InlineKeyboardButton(text="👤 Мой профиль / Рефералы", callback_data="open_profile"),
@@ -83,4 +84,21 @@ async def cmd_start(message: Message):
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=buttons)
 
-    await message.answer(welcome_text, parse_mode="HTML", reply_markup=keyboard)
+    if isinstance(event, CallbackQuery):
+        try:
+            await event.message.edit_text(welcome_text, parse_mode="HTML", reply_markup=keyboard)
+        except Exception:
+            await event.message.answer(welcome_text, parse_mode="HTML", reply_markup=keyboard)
+        await event.answer()
+    else:
+        await event.answer(welcome_text, parse_mode="HTML", reply_markup=keyboard)
+
+
+@router.message(CommandStart())
+async def cmd_start(message: Message):
+    await render_welcome(message)
+
+
+@router.callback_query(F.data == "back_to_menu")
+async def back_to_menu_callback(callback: CallbackQuery):
+    await render_welcome(callback)

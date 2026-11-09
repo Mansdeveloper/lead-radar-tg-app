@@ -1,3 +1,4 @@
+import math
 from datetime import date, datetime, timedelta, timezone
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -34,11 +35,14 @@ async def get_or_create_user(
                 referrer = ref_res.scalar_one_or_none()
                 if referrer:
                     referrer.referral_count += 1
-                    current_until = referrer.premium_until or now
-                    if current_until < now:
+                    current_until = referrer.premium_until
+                    if current_until is not None and current_until.tzinfo is None:
+                        current_until = current_until.replace(tzinfo=timezone.utc)
+                    if current_until is None or current_until < now:
                         current_until = now
                     referrer.premium_until = current_until + timedelta(days=7)
                     referrer.is_premium = True
+                    referrer.trial_expired_notified = True
                     await session.commit()
         else:
             # Grant trial if existing user never had trial_until initialized and is not premium
@@ -65,46 +69,53 @@ async def get_user(telegram_id: int) -> User | None:
         return result.scalar_one_or_none()
 
 
+def compute_user_status(user: User | None) -> dict:
+    """Synchronously compute status from user model instance with 0 DB overhead"""
+    if not user:
+        return {
+            "is_premium": False,
+            "is_trial": False,
+            "trial_hours_left": 0,
+            "has_instant_delivery": False,
+        }
+
+    now = datetime.now(timezone.utc)
+
+    # 1. Check paid premium
+    is_prem = False
+    if user.premium_until:
+        target_p = user.premium_until
+        if target_p.tzinfo is None:
+            target_p = target_p.replace(tzinfo=timezone.utc)
+        is_prem = target_p > now
+    elif user.is_premium:
+        is_prem = True
+
+    # 2. Check 24h Welcome Trial
+    is_trial = False
+    trial_hours_left = 0
+    if not is_prem and user.trial_until:
+        target_t = user.trial_until
+        if target_t.tzinfo is None:
+            target_t = target_t.replace(tzinfo=timezone.utc)
+        if target_t > now:
+            is_trial = True
+            trial_hours_left = max(1, int(math.ceil((target_t - now).total_seconds() / 3600)))
+
+    return {
+        "is_premium": is_prem,
+        "is_trial": is_trial,
+        "trial_hours_left": trial_hours_left,
+        "has_instant_delivery": is_prem or is_trial,
+    }
+
+
 async def get_user_status(telegram_id: int) -> dict:
     """Returns is_premium, is_trial, trial_hours_left, has_instant_delivery"""
     async with async_session() as session:
         result = await session.execute(select(User).where(User.telegram_id == telegram_id))
         user = result.scalar_one_or_none()
-        if not user:
-            return {
-                "is_premium": False,
-                "is_trial": False,
-                "trial_hours_left": 0,
-                "has_instant_delivery": False,
-            }
-
-        now = datetime.now(timezone.utc)
-
-        # 1. Check paid premium
-        is_prem = False
-        if user.premium_until:
-            target_p = user.premium_until
-            if target_p.tzinfo is None:
-                target_p = target_p.replace(tzinfo=timezone.utc)
-            is_prem = target_p > now
-
-        # 2. Check 24h Welcome Trial
-        is_trial = False
-        trial_hours_left = 0
-        if not is_prem and user.trial_until:
-            target_t = user.trial_until
-            if target_t.tzinfo is None:
-                target_t = target_t.replace(tzinfo=timezone.utc)
-            if target_t > now:
-                is_trial = True
-                trial_hours_left = max(1, int((target_t - now).total_seconds() // 3600))
-
-        return {
-            "is_premium": is_prem,
-            "is_trial": is_trial,
-            "trial_hours_left": trial_hours_left,
-            "has_instant_delivery": is_prem or is_trial,
-        }
+        return compute_user_status(user)
 
 
 async def is_user_premium(telegram_id: int) -> bool:
@@ -129,14 +140,16 @@ async def grant_premium(telegram_id: int, days: int) -> datetime:
 
         now = datetime.now(timezone.utc)
         current = user.premium_until
-        if current is None or (current.tzinfo is None and current < now.replace(tzinfo=None)):
-            current = now
-        elif current.tzinfo is not None and current < now:
+        if current is not None and current.tzinfo is None:
+            current = current.replace(tzinfo=timezone.utc)
+
+        if current is None or current < now:
             current = now
 
         new_until = current + timedelta(days=days)
         user.premium_until = new_until
         user.is_premium = True
+        user.trial_expired_notified = True
         await session.commit()
         return new_until
 
@@ -281,12 +294,26 @@ async def get_users_with_expired_trial() -> list[User]:
         users = list(result.scalars().all())
 
         eligible = []
+        to_mark_notified = []
         for u in users:
+            is_active_prem = u.is_premium
             if u.premium_until:
                 p_target = u.premium_until if u.premium_until.tzinfo else u.premium_until.replace(tzinfo=timezone.utc)
                 if p_target > now:
-                    continue
-            eligible.append(u)
+                    is_active_prem = True
+            if is_active_prem:
+                to_mark_notified.append(u.telegram_id)
+            else:
+                eligible.append(u)
+
+        if to_mark_notified:
+            await session.execute(
+                update(User)
+                .where(User.telegram_id.in_(to_mark_notified))
+                .values(trial_expired_notified=True)
+            )
+            await session.commit()
+
         return eligible
 
 

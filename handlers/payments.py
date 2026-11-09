@@ -10,7 +10,7 @@ from aiogram.types import (
 )
 
 from config import settings
-from database.crud import get_user_status, grant_premium, is_user_premium
+from database.crud import get_user_status, grant_premium
 
 router = Router()
 

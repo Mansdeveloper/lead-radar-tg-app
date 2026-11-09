@@ -12,7 +12,6 @@ from database.crud import (
     get_user,
     get_user_filters,
     get_user_status,
-    is_user_premium,
     update_user_full_filters,
 )
 
@@ -22,6 +21,18 @@ WEBAPP_DIR = Path(__file__).parent
 
 def create_webapp(bot: Bot) -> web.Application:
     app = web.Application()
+    cached_bot_username: str | None = None
+
+    async def get_bot_username() -> str:
+        nonlocal cached_bot_username
+        if not cached_bot_username:
+            try:
+                bot_info = await bot.get_me()
+                cached_bot_username = bot_info.username or ""
+            except Exception as e:
+                logger.warning(f"Could not fetch bot username: {e}")
+                return "fast_leadss_bot"
+        return cached_bot_username
 
     async def handle_index(request: web.Request) -> web.Response:
         index_file = WEBAPP_DIR / "index.html"
@@ -54,6 +65,8 @@ def create_webapp(bot: Bot) -> web.Application:
         user_id_str = request.match_info.get("id")
         try:
             user_id = int(user_id_str)
+            if user_id <= 0:
+                raise ValueError("User ID must be positive")
         except (ValueError, TypeError):
             return web.json_response({"ok": False, "error": "Invalid user ID"}, status=400)
 
@@ -64,8 +77,8 @@ def create_webapp(bot: Bot) -> web.Application:
         status = await get_user_status(user_id)
         filters = await get_user_filters(user_id)
 
-        bot_info = await bot.get_me()
-        ref_link = f"https://t.me/{bot_info.username}?start=ref_{user_id}"
+        username = await get_bot_username()
+        ref_link = f"https://t.me/{username}?start=ref_{user_id}"
 
         return web.json_response(
             {
@@ -98,6 +111,8 @@ def create_webapp(bot: Bot) -> web.Application:
         user_id_str = request.match_info.get("id")
         try:
             user_id = int(user_id_str)
+            if user_id <= 0:
+                raise ValueError("User ID must be positive")
             body = await request.json()
         except Exception as e:
             return web.json_response({"ok": False, "error": str(e)}, status=400)
@@ -118,6 +133,8 @@ def create_webapp(bot: Bot) -> web.Application:
         try:
             body = await request.json()
             user_id = int(body.get("user_id"))
+            if user_id <= 0:
+                raise ValueError("User ID must be positive")
         except Exception as e:
             return web.json_response({"ok": False, "error": str(e)}, status=400)
 

@@ -9,6 +9,7 @@ if sys.platform == "win32":
 
 from database.session import init_db, async_session
 from database.crud import (
+    compute_user_status,
     get_or_create_user,
     get_user,
     get_user_status,
@@ -26,7 +27,7 @@ from parsers.base import RawLead
 from parsers.fl import FLRuParser
 from parsers.freelancehunt import FreelancehuntParser
 from services.matcher import build_lead_keyboard, format_lead_message, matches_filter
-from sqlalchemy import update
+from sqlalchemy import delete, select, update
 
 
 async def run_self_verification():
@@ -37,6 +38,11 @@ async def run_self_verification():
 
     print("\n2. Testing Welcome Trial (24h) Initialization for New Users...")
     trial_test_id = 777123456
+    # Clean up prior test state if any
+    async with async_session() as s:
+        await s.execute(delete(User).where(User.telegram_id.in_([trial_test_id, 777987654, 999999999, 888777666])))
+        await s.commit()
+
     trial_user, created = await get_or_create_user(
         telegram_id=trial_test_id, username="trial_tester"
     )
@@ -47,8 +53,12 @@ async def run_self_verification():
     assert status["is_trial"] is True, f"Expected is_trial=True, got {status['is_trial']}"
     assert status["is_premium"] is False, f"Expected is_premium=False, got {status['is_premium']}"
     assert status["has_instant_delivery"] is True, "Trial user must have instant delivery!"
-    assert 23 <= status["trial_hours_left"] <= 24, f"Unexpected trial_hours_left: {status['trial_hours_left']}"
+    assert status["trial_hours_left"] == 24, f"Expected 24h left right after creation, got {status['trial_hours_left']}"
     assert await is_turbo_active(trial_test_id) is True, "is_turbo_active should be True for trial user!"
+
+    # Verify zero-overhead in-memory compute_user_status produces identical results
+    mem_status = compute_user_status(trial_user)
+    assert mem_status == status, "compute_user_status mismatch with get_user_status"
     print(f"✅ Welcome Trial correctly assigned: {status['trial_hours_left']}h left, instant delivery active!")
 
     print("\n3. Testing Lead Badge & Keyboard Formatting for Trial, Premium, and Free...")
@@ -120,6 +130,27 @@ async def run_self_verification():
     assert expired_status["has_instant_delivery"] is False, "Expired user must not have instant delivery!"
     print("✅ Trial expiration notification cycle and status transition verified!")
 
+    # 4b. Test active premium user auto-marked as notified
+    active_prem_id = 888777666
+    ap_user, _ = await get_or_create_user(telegram_id=active_prem_id, username="prem_expired_trial")
+    async with async_session() as session:
+        await session.execute(
+            update(User)
+            .where(User.telegram_id == active_prem_id)
+            .values(
+                trial_until=past_time,
+                trial_expired_notified=False,
+                is_premium=True,
+                premium_until=datetime.now(timezone.utc) + timedelta(days=30),
+            )
+        )
+        await session.commit()
+    expired_with_prem = await get_users_with_expired_trial()
+    assert active_prem_id not in [u.telegram_id for u in expired_with_prem], "Active premium user must not receive expired trial push!"
+    ap_refreshed = await get_user(active_prem_id)
+    assert ap_refreshed.trial_expired_notified is True, "Active premium user should be marked trial_expired_notified=True!"
+    print("✅ Active premium user suppressed and marked notified verified!")
+
     print("\n5. Testing Filter matching logic...")
     test_text_1 = "Требуется разработать телеграм бот на Python для автоворонок"
     test_text_2 = "Нужна курсовая работа по программированию на Python"
@@ -135,7 +166,9 @@ async def run_self_verification():
     await grant_premium(user_id, days=7)
     assert await is_user_premium(user_id) is True, "Premium grant failed"
     assert await is_turbo_active(user_id) is True, "is_turbo_active failed for premium"
-    print("✅ Premium grant verified!")
+    user_row = await get_user(user_id)
+    assert user_row.trial_expired_notified is True, "grant_premium must mark trial_expired_notified=True"
+    print("✅ Premium grant and trial notification suppression verified!")
 
     print("\n7. Testing Live Feed Parsing (Freelancehunt & FL)...")
     fh = FreelancehuntParser()
@@ -192,9 +225,20 @@ async def run_self_verification():
     assert data["ok"] is True
     assert data["user"]["is_trial"] is True
     assert data["user"]["has_instant_delivery"] is True
-    assert 23 <= data["user"]["trial_hours_left"] <= 24
+    assert data["user"]["trial_hours_left"] == 24
+    assert "t.me/fast_leadss_bot?start=ref_" in data["user"]["referral_link"]
+
+    # Verify input validation on negative / invalid user ID
+    bad_res = await client.get("/api/user/-1")
+    assert bad_res.status == 400, "Negative user ID must return 400"
     await client.close()
     print("✅ Mini App REST API (/api/user/{id}) correctly returned trial status & remaining hours!")
+
+    # Cleanup test users
+    async with async_session() as s:
+        await s.execute(delete(User).where(User.telegram_id.in_([trial_test_id, expired_test_id, user_id, active_prem_id])))
+        await s.commit()
+    print("✅ Test data cleaned up successfully!")
 
     print("\n" + "=" * 60)
     print("ALL TESTS PASSED! Lead Radar 24h Welcome Trial is production-ready.")

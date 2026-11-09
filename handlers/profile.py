@@ -55,11 +55,3 @@ async def show_profile(event: Message | CallbackQuery):
         await event.answer()
     else:
         await event.answer(text, parse_mode="HTML", reply_markup=kb)
-
-
-@router.callback_query(F.data == "back_to_menu")
-async def back_to_menu_handler(callback: CallbackQuery):
-    from handlers.start import cmd_start
-    await callback.message.delete()
-    await cmd_start(callback.message)
-    await callback.answer()
