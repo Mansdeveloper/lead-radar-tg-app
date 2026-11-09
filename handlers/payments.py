@@ -10,7 +10,7 @@ from aiogram.types import (
 )
 
 from config import settings
-from database.crud import grant_premium, is_user_premium
+from database.crud import get_user_status, grant_premium, is_user_premium
 
 router = Router()
 
@@ -19,9 +19,15 @@ router = Router()
 @router.callback_query(F.data == "buy_premium")
 async def show_premium_offer(event: Message | CallbackQuery):
     user_id = event.from_user.id
-    is_prem = await is_user_premium(user_id)
+    status = await get_user_status(user_id)
 
-    status_str = "активна ⚡" if is_prem else "не активна ⏳"
+    if status["is_premium"]:
+        status_str = "активна ⚡"
+    elif status["is_trial"]:
+        hours = status["trial_hours_left"]
+        status_str = f"активен Welcome Trial (осталось ~{hours}ч) ⚡"
+    else:
+        status_str = "не активна ⏳"
 
     text = (
         "💎 <b>Lead Radar Premium</b>\n\n"

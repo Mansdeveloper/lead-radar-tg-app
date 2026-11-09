@@ -3,7 +3,7 @@ from aiogram.filters import CommandStart
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from config import settings
-from database.crud import get_or_create_user
+from database.crud import get_or_create_user, get_user_status
 
 router = Router()
 
@@ -31,16 +31,36 @@ async def cmd_start(message: Message):
         referred_by=referred_by,
     )
 
+    status = await get_user_status(user_id)
+    if status["is_premium"]:
+        sub_text = "⚡ <b>PREMIUM</b> (0 сек задержка, безлимит)"
+    elif status["is_trial"]:
+        hours = status["trial_hours_left"]
+        sub_text = f"⚡ <b>WELCOME TRIAL 24ч: 0 сек задержка АКТИВНА</b> (осталось ~{hours}ч)!"
+    else:
+        sub_text = (
+            f"⏳ <b>FREE</b> (задержка {settings.FREE_DELAY_SECONDS // 60} мин, "
+            f"до {settings.FREE_MAX_DAILY_LEADS} лидов/день)"
+        )
+
     welcome_text = (
         "👋 <b>Добро пожаловать в Lead Radar!</b>\n\n"
         "⚡ <b>Что делает бот:</b>\n"
-        "В реальном времени сканирует биржи фриланса (Хабр Фриланс, FL.ru) и присылает горячие заказы "
+        "В реальном времени сканирует биржи фриланса (Хабр Фриланс, FL.ru, Freelancehunt) и присылает горячие заказы "
         "прямо вам в Telegram за пару секунд с момента их публикации заказчиком.\n\n"
         "🎯 <b>Во фрилансе побеждает первый:</b> отклик в первые 3 минуты повышает вероятность взять заказ на 80%.\n\n"
-        "📊 <b>Ваш текущий тариф:</b> FREE\n"
-        f"• До {settings.FREE_MAX_DAILY_LEADS} лидов в день\n"
-        f"• Доставка с задержкой {settings.FREE_DELAY_SECONDS // 60} минут\n\n"
-        "🚀 <i>Хотите мгновенные уведомления без задержки и безлимит?</i>\n"
+        f"📊 <b>Ваш статус:</b> {sub_text}\n\n"
+    )
+
+    if status["is_trial"]:
+        welcome_text += (
+            "🎁 <b>Вам активирован 24-часовой Welcome Trial!</b>\n"
+            "Все новые заказы будут поступать вам <b>мгновенно (0 секунд задержки)</b>, "
+            "чтобы вы оценили преимущество перехвата заказов первее конкурентов.\n\n"
+        )
+
+    welcome_text += (
+        "🚀 <i>Хотите закрепить мгновенные уведомления без задержки и безлимит?</i>\n"
         "Оформите <b>Premium</b> или пригласите коллегу по реферальной ссылке и получите <b>+7 дней Premium бесплатно</b>!"
     )
 

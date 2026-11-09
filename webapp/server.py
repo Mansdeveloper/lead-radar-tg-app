@@ -11,6 +11,7 @@ from database.crud import (
     get_recent_leads,
     get_user,
     get_user_filters,
+    get_user_status,
     is_user_premium,
     update_user_full_filters,
 )
@@ -60,7 +61,7 @@ def create_webapp(bot: Bot) -> web.Application:
         if not user:
             user, _ = await get_or_create_user(telegram_id=user_id)
 
-        is_prem = await is_user_premium(user_id)
+        status = await get_user_status(user_id)
         filters = await get_user_filters(user_id)
 
         bot_info = await bot.get_me()
@@ -71,7 +72,11 @@ def create_webapp(bot: Bot) -> web.Application:
                 "ok": True,
                 "user": {
                     "id": user.telegram_id,
-                    "is_premium": is_prem,
+                    "is_premium": status["is_premium"],
+                    "is_trial": status["is_trial"],
+                    "trial_hours_left": status["trial_hours_left"],
+                    "trial_until": user.trial_until.isoformat() if user.trial_until else None,
+                    "has_instant_delivery": status["has_instant_delivery"],
                     "premium_until": user.premium_until.strftime("%d.%m.%Y")
                     if user.premium_until
                     else None,

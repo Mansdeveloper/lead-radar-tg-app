@@ -11,6 +11,7 @@ from config import settings
 from database.session import init_db
 from handlers import filters, payments, profile, start
 from parsers.manager import IngestionManager
+from services.trial_notifier import TrialNotifier
 from webapp.server import create_webapp
 
 logging.basicConfig(
@@ -60,6 +61,10 @@ async def main():
     ingestion = IngestionManager(bot=bot)
     ingestion_task = asyncio.create_task(ingestion.start())
 
+    # Start Trial Expiration Notifier Background Service
+    trial_notifier = TrialNotifier(bot=bot, check_interval_seconds=60)
+    trial_task = asyncio.create_task(trial_notifier.start())
+
     # Start Embedded WebApp / REST API server
     webapp_app = create_webapp(bot=bot)
     runner = web.AppRunner(webapp_app)
@@ -74,6 +79,8 @@ async def main():
     try:
         await dp.start_polling(bot)
     finally:
+        trial_notifier.stop()
+        trial_task.cancel()
         ingestion.stop()
         ingestion_task.cancel()
         await runner.cleanup()

@@ -12,11 +12,14 @@ async def get_or_create_user(
         result = await session.execute(select(User).where(User.telegram_id == telegram_id))
         user = result.scalar_one_or_none()
         created = False
+        now = datetime.now(timezone.utc)
         if not user:
             user = User(
                 telegram_id=telegram_id,
                 username=username,
                 referred_by=referred_by if referred_by != telegram_id else None,
+                trial_until=now + timedelta(hours=24),
+                trial_expired_notified=False,
             )
             session.add(user)
             await session.commit()
@@ -31,13 +34,18 @@ async def get_or_create_user(
                 referrer = ref_res.scalar_one_or_none()
                 if referrer:
                     referrer.referral_count += 1
-                    now = datetime.now(timezone.utc)
                     current_until = referrer.premium_until or now
                     if current_until < now:
                         current_until = now
                     referrer.premium_until = current_until + timedelta(days=7)
                     referrer.is_premium = True
                     await session.commit()
+        else:
+            # Grant trial if existing user never had trial_until initialized and is not premium
+            if user.trial_until is None and not user.is_premium and not user.trial_expired_notified:
+                user.trial_until = now + timedelta(hours=24)
+                await session.commit()
+                await session.refresh(user)
 
         # Ensure filter exists for user
         fil_res = await session.execute(
@@ -57,20 +65,58 @@ async def get_user(telegram_id: int) -> User | None:
         return result.scalar_one_or_none()
 
 
-async def is_user_premium(telegram_id: int) -> bool:
+async def get_user_status(telegram_id: int) -> dict:
+    """Returns is_premium, is_trial, trial_hours_left, has_instant_delivery"""
     async with async_session() as session:
         result = await session.execute(select(User).where(User.telegram_id == telegram_id))
         user = result.scalar_one_or_none()
         if not user:
-            return False
-        if not user.premium_until:
-            return False
-        # Normalize timezone
+            return {
+                "is_premium": False,
+                "is_trial": False,
+                "trial_hours_left": 0,
+                "has_instant_delivery": False,
+            }
+
         now = datetime.now(timezone.utc)
-        target = user.premium_until
-        if target.tzinfo is None:
-            target = target.replace(tzinfo=timezone.utc)
-        return target > now
+
+        # 1. Check paid premium
+        is_prem = False
+        if user.premium_until:
+            target_p = user.premium_until
+            if target_p.tzinfo is None:
+                target_p = target_p.replace(tzinfo=timezone.utc)
+            is_prem = target_p > now
+
+        # 2. Check 24h Welcome Trial
+        is_trial = False
+        trial_hours_left = 0
+        if not is_prem and user.trial_until:
+            target_t = user.trial_until
+            if target_t.tzinfo is None:
+                target_t = target_t.replace(tzinfo=timezone.utc)
+            if target_t > now:
+                is_trial = True
+                trial_hours_left = max(1, int((target_t - now).total_seconds() // 3600))
+
+        return {
+            "is_premium": is_prem,
+            "is_trial": is_trial,
+            "trial_hours_left": trial_hours_left,
+            "has_instant_delivery": is_prem or is_trial,
+        }
+
+
+async def is_user_premium(telegram_id: int) -> bool:
+    """Returns True if user has active paid premium"""
+    status = await get_user_status(telegram_id)
+    return status["is_premium"]
+
+
+async def is_turbo_active(telegram_id: int) -> bool:
+    """Returns True if user has 0-sec instant delivery (paid premium OR active 24h trial)"""
+    status = await get_user_status(telegram_id)
+    return status["has_instant_delivery"]
 
 
 async def grant_premium(telegram_id: int, days: int) -> datetime:
@@ -218,3 +264,38 @@ async def update_user_full_filters(
             .values(keywords=keywords, stop_words=stop_words, min_budget=min_budget)
         )
         await session.commit()
+
+
+async def get_users_with_expired_trial() -> list[User]:
+    """Find users whose trial ended within the last 48 hours, not yet notified, and no active premium"""
+    now = datetime.now(timezone.utc)
+    lookback = now - timedelta(days=2)
+    async with async_session() as session:
+        query = select(User).where(
+            User.trial_until.is_not(None),
+            User.trial_until <= now,
+            User.trial_until >= lookback,
+            User.trial_expired_notified == False,
+        )
+        result = await session.execute(query)
+        users = list(result.scalars().all())
+
+        eligible = []
+        for u in users:
+            if u.premium_until:
+                p_target = u.premium_until if u.premium_until.tzinfo else u.premium_until.replace(tzinfo=timezone.utc)
+                if p_target > now:
+                    continue
+            eligible.append(u)
+        return eligible
+
+
+async def mark_trial_expired_notified(user_id: int) -> None:
+    async with async_session() as session:
+        await session.execute(
+            update(User)
+            .where(User.telegram_id == user_id)
+            .values(trial_expired_notified=True)
+        )
+        await session.commit()
+

@@ -3,7 +3,7 @@ from aiogram.filters import Command
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message
 
 from config import settings
-from database.crud import get_user, is_user_premium
+from database.crud import get_user, get_user_status
 
 router = Router()
 
@@ -13,15 +13,18 @@ router = Router()
 async def show_profile(event: Message | CallbackQuery):
     user_id = event.from_user.id
     user = await get_user(user_id)
-    is_prem = await is_user_premium(user_id)
+    status = await get_user_status(user_id)
 
     bot_info = await event.bot.get_me()
     ref_link = f"https://t.me/{bot_info.username}?start=ref_{user_id}"
 
-    if is_prem and user and user.premium_until:
+    if status["is_premium"] and user and user.premium_until:
         sub_status = f"⚡ <b>PREMIUM</b> (до {user.premium_until.strftime('%d.%m.%Y')})"
+    elif status["is_trial"]:
+        hours = status["trial_hours_left"]
+        sub_status = f"⚡ <b>WELCOME TRIAL 24ч</b> (0 сек задержка, осталось ~{hours}ч)"
     else:
-        sub_status = "⏳ <b>FREE</b> (задержка 15 мин, до 3 лидов/день)"
+        sub_status = f"⏳ <b>FREE</b> (задержка {settings.FREE_DELAY_SECONDS // 60} мин, до {settings.FREE_MAX_DAILY_LEADS} лидов/день)"
 
     ref_count = user.referral_count if user else 0
 

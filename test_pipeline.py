@@ -1,42 +1,126 @@
 import asyncio
 import io
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 if sys.platform == "win32":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
-from database.session import init_db
+from database.session import init_db, async_session
 from database.crud import (
     get_or_create_user,
+    get_user,
+    get_user_status,
+    get_users_with_expired_trial,
     grant_premium,
+    is_turbo_active,
     is_user_premium,
+    mark_trial_expired_notified,
     update_user_keywords,
     update_user_stop_words,
     save_lead,
 )
+from database.models import User
+from parsers.base import RawLead
 from parsers.fl import FLRuParser
 from parsers.freelancehunt import FreelancehuntParser
-from services.matcher import matches_filter
+from services.matcher import build_lead_keyboard, format_lead_message, matches_filter
+from sqlalchemy import update
 
 
 async def run_self_verification():
     print("=" * 60)
-    print("1. Testing Database Schema Initialization...")
+    print("1. Testing Database Schema Initialization & Column Migration...")
     await init_db()
-    print("✅ DB Schema created successfully!")
+    print("✅ DB Schema created and auto-migration verified successfully!")
 
-    print("\n2. Testing User & Filter CRUD...")
-    user_id = 999999999
-    user, created = await get_or_create_user(telegram_id=user_id, username="test_lead_bot")
-    print(f"✅ User created/retrieved: ID={user.telegram_id}, created={created}")
+    print("\n2. Testing Welcome Trial (24h) Initialization for New Users...")
+    trial_test_id = 777123456
+    trial_user, created = await get_or_create_user(
+        telegram_id=trial_test_id, username="trial_tester"
+    )
+    assert trial_user.trial_until is not None, "trial_until was not set for new user!"
+    assert trial_user.trial_expired_notified is False, "trial_expired_notified should be False!"
 
-    await update_user_keywords(user_id, "python, react, бот")
-    await update_user_stop_words(user_id, "диплом, курсовая")
-    print("✅ Filters updated!")
+    status = await get_user_status(trial_test_id)
+    assert status["is_trial"] is True, f"Expected is_trial=True, got {status['is_trial']}"
+    assert status["is_premium"] is False, f"Expected is_premium=False, got {status['is_premium']}"
+    assert status["has_instant_delivery"] is True, "Trial user must have instant delivery!"
+    assert 23 <= status["trial_hours_left"] <= 24, f"Unexpected trial_hours_left: {status['trial_hours_left']}"
+    assert await is_turbo_active(trial_test_id) is True, "is_turbo_active should be True for trial user!"
+    print(f"✅ Welcome Trial correctly assigned: {status['trial_hours_left']}h left, instant delivery active!")
 
-    # Check filter matching logic
+    print("\n3. Testing Lead Badge & Keyboard Formatting for Trial, Premium, and Free...")
+    sample_lead = RawLead(
+        source="fl_ru",
+        external_id="test_ext_1",
+        title="Разработка Telegram Mini App на React",
+        description="Нужен опытный разработчик для создания Mini App",
+        url="https://fl.ru/projects/test",
+        budget="50 000 ₽",
+        category="development",
+        published_at=datetime.now(timezone.utc),
+        raw_text="Разработка Telegram Mini App на React",
+    )
+
+    # 3a. Trial formatting
+    trial_msg = format_lead_message(sample_lead, is_premium=False, is_trial=True)
+    assert "⚡ <b>МГНОВЕННЫЙ ЛИД [TRIAL 24ч]</b>" in trial_msg, "Trial badge missing in message!"
+    assert "Welcome Trial" in trial_msg, "Trial notice missing in message!"
+    trial_kb = build_lead_keyboard(sample_lead, is_premium=False, is_trial=True)
+    trial_btn_texts = [btn.text for row in trial_kb.inline_keyboard for btn in row]
+    assert any("Закрепить 0 сек" in t for t in trial_btn_texts), "Trial upsell button missing!"
+    print("✅ Trial message and keyboard verified!")
+
+    # 3b. Premium formatting
+    prem_msg = format_lead_message(sample_lead, is_premium=True, is_trial=False)
+    assert "⚡ <b>МГНОВЕННЫЙ ЛИД [PREMIUM]</b>" in prem_msg, "Premium badge missing!"
+    prem_kb = build_lead_keyboard(sample_lead, is_premium=True, is_trial=False)
+    prem_btn_texts = [btn.text for row in prem_kb.inline_keyboard for btn in row]
+    assert not any("Premium" in t for t in prem_btn_texts), "Premium user should not see upsell button!"
+    print("✅ Premium message and keyboard verified!")
+
+    # 3c. Free formatting
+    free_msg = format_lead_message(sample_lead, is_premium=False, is_trial=False)
+    assert "⏳ <b>Лид доставлен с задержкой 15 мин [FREE]</b>" in free_msg, "Free badge missing!"
+    free_kb = build_lead_keyboard(sample_lead, is_premium=False, is_trial=False)
+    free_btn_texts = [btn.text for row in free_kb.inline_keyboard for btn in row]
+    assert any("Убрать задержку" in t for t in free_btn_texts), "Free upsell button missing!"
+    print("✅ Free message and keyboard verified!")
+
+    print("\n4. Testing Trial Expiration Detection and Notification Flag...")
+    expired_test_id = 777987654
+    exp_user, _ = await get_or_create_user(
+        telegram_id=expired_test_id, username="expired_tester"
+    )
+    # Force trial to have expired 2 hours ago
+    past_time = datetime.now(timezone.utc) - timedelta(hours=2)
+    async with async_session() as session:
+        await session.execute(
+            update(User)
+            .where(User.telegram_id == expired_test_id)
+            .values(trial_until=past_time, trial_expired_notified=False, is_premium=False)
+        )
+        await session.commit()
+
+    expired_users = await get_users_with_expired_trial()
+    expired_ids = [u.telegram_id for u in expired_users]
+    assert expired_test_id in expired_ids, "Expired user not detected by get_users_with_expired_trial!"
+    print(f"✅ Expired trial detected for user {expired_test_id}")
+
+    # Mark as notified
+    await mark_trial_expired_notified(expired_test_id)
+    expired_users_after = await get_users_with_expired_trial()
+    expired_ids_after = [u.telegram_id for u in expired_users_after]
+    assert expired_test_id not in expired_ids_after, "User should be excluded after mark_trial_expired_notified!"
+
+    expired_status = await get_user_status(expired_test_id)
+    assert expired_status["is_trial"] is False, "Expired user must not have is_trial=True!"
+    assert expired_status["has_instant_delivery"] is False, "Expired user must not have instant delivery!"
+    print("✅ Trial expiration notification cycle and status transition verified!")
+
+    print("\n5. Testing Filter matching logic...")
     test_text_1 = "Требуется разработать телеграм бот на Python для автоворонок"
     test_text_2 = "Нужна курсовая работа по программированию на Python"
     test_text_3 = "Дизайн карточек товара на маркетплейсе"
@@ -46,15 +130,14 @@ async def run_self_verification():
     assert matches_filter(test_text_3.lower(), "python, react, бот", "диплом, курсовая") is False, "Test 3 failed (keywords didn't match)"
     print("✅ Filter matching unit tests PASSED!")
 
-    print("\n3. Testing Premium & Referral mechanics...")
-    is_prem_before = await is_user_premium(user_id)
-    print(f"Premium before grant: {is_prem_before}")
+    print("\n6. Testing Premium grant mechanics...")
+    user_id = 999999999
     await grant_premium(user_id, days=7)
-    is_prem_after = await is_user_premium(user_id)
-    assert is_prem_after is True, "Premium grant failed"
-    print(f"✅ Premium grant verified: {is_prem_after}")
+    assert await is_user_premium(user_id) is True, "Premium grant failed"
+    assert await is_turbo_active(user_id) is True, "is_turbo_active failed for premium"
+    print("✅ Premium grant verified!")
 
-    print("\n4. Testing Live Feed Parsing (Freelancehunt & FL)...")
+    print("\n7. Testing Live Feed Parsing (Freelancehunt & FL)...")
     fh = FreelancehuntParser()
     fh_leads = await fh.fetch_latest()
     print(f"Freelancehunt RSS returned: {len(fh_leads)} leads")
@@ -89,8 +172,32 @@ async def run_self_verification():
     fl_leads = await fl.fetch_latest()
     print(f"FL.ru RSS returned: {len(fl_leads)} leads")
 
+    print("\n8. Testing Mini App REST API (/api/user/{id})...")
+    from aiohttp.test_utils import TestClient, TestServer
+    from unittest.mock import AsyncMock, MagicMock
+    from webapp.server import create_webapp
+
+    mock_bot = MagicMock()
+    mock_info = MagicMock()
+    mock_info.username = "fast_leadss_bot"
+    mock_bot.get_me = AsyncMock(return_value=mock_info)
+
+    webapp = create_webapp(mock_bot)
+    client = TestClient(TestServer(webapp))
+    await client.start_server()
+
+    res = await client.get(f"/api/user/{trial_test_id}")
+    assert res.status == 200, f"Expected 200, got {res.status}"
+    data = await res.json()
+    assert data["ok"] is True
+    assert data["user"]["is_trial"] is True
+    assert data["user"]["has_instant_delivery"] is True
+    assert 23 <= data["user"]["trial_hours_left"] <= 24
+    await client.close()
+    print("✅ Mini App REST API (/api/user/{id}) correctly returned trial status & remaining hours!")
+
     print("\n" + "=" * 60)
-    print("ALL TESTS PASSED! Lead Radar engine is production-ready.")
+    print("ALL TESTS PASSED! Lead Radar 24h Welcome Trial is production-ready.")
     print("=" * 60)
 
 

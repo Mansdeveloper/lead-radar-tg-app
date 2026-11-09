@@ -15,6 +15,8 @@ class User(Base):
     username: Mapped[str | None] = mapped_column(String(128), nullable=True)
     is_premium: Mapped[bool] = mapped_column(Boolean, default=False)
     premium_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    trial_until: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    trial_expired_notified: Mapped[bool] = mapped_column(Boolean, default=False)
     referred_by: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     referral_count: Mapped[int] = mapped_column(Integer, default=0)
     daily_leads_sent: Mapped[int] = mapped_column(Integer, default=0)

@@ -133,6 +133,7 @@
             <p class="font-extrabold font-display text-zinc-950" id="radar-delay-badge">⏳ 15 мин задержка (Free)</p>
           </div>
           <button 
+            id="radar-action-btn"
             onclick="navigateTo('premium')" 
             class="px-3.5 py-1.5 bg-black text-white rounded-full text-[11px] font-extrabold font-display active:scale-95 transition-transform"
           >
@@ -328,6 +329,8 @@
         <div class="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-white/[0.08] border border-white/10 text-[10px] font-extrabold font-display text-[#FFD15C] uppercase tracking-wider">
           <span>⚡ МАКСИМАЛЬНАЯ СКОРОСТЬ</span>
         </div>
+
+        <div id="premium-trial-banner" class="hidden rounded-2xl p-3 bg-amber-400/10 border border-amber-400/30 text-xs text-amber-200"></div>
 
         <div>
           <h2 class="text-2xl font-black font-display tracking-tight text-white">Lead Radar Premium</h2>
@@ -792,11 +795,28 @@
           const filters = data.filters;
 
           const delayBadge = document.getElementById('radar-delay-badge');
+          const actionBtn = document.getElementById('radar-action-btn');
+          const trialBanner = document.getElementById('premium-trial-banner');
+
           if (user.is_premium) {
             delayBadge.textContent = '⚡ 0 сек задержка (PREMIUM)';
             delayBadge.className = 'font-black font-display text-emerald-950';
+            if (actionBtn) actionBtn.textContent = 'Подписка активна';
+            if (trialBanner) trialBanner.classList.add('hidden');
+          } else if (user.is_trial) {
+            const hours = user.trial_hours_left || 24;
+            delayBadge.textContent = `⚡ 0 сек задержка (Trial: остался ${hours}ч)`;
+            delayBadge.className = 'font-black font-display text-zinc-950';
+            if (actionBtn) actionBtn.textContent = 'Закрепить 0 сек';
+            if (trialBanner) {
+              trialBanner.innerHTML = `🎁 <b>Welcome Trial 24ч активен:</b> осталось ~<b>${hours} ч</b> мгновенного перехвата (0 сек). Оформите Premium заранее, чтобы сохранить скорость!`;
+              trialBanner.classList.remove('hidden');
+            }
           } else {
             delayBadge.textContent = '⏳ 15 мин задержка (Free)';
+            delayBadge.className = 'font-extrabold font-display text-zinc-950';
+            if (actionBtn) actionBtn.textContent = 'Включить 0 сек';
+            if (trialBanner) trialBanner.classList.add('hidden');
           }
 
           userReferralUrl = user.referral_link;
