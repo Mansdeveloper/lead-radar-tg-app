@@ -640,13 +640,13 @@
     // 12 SPECIALTY CATEGORIES DICTIONARY
     const SPECIALTY_KEYWORDS = {
       python: ['python', 'питон', 'парсер', 'парсинг', 'django', 'fastapi', 'flask', 'скрипт', 'ai', 'нейросет', 'data'],
-      bot: ['бот', 'bot', 'telegram', 'телеграм', 'тг', 'tma', 'mini app', 'мини апп'],
-      frontend: ['react', 'vue', 'next', 'frontend', 'фронтенд', 'верстка', 'html', 'css', 'landing', 'лендинг', 'tilda', 'тильда', 'сайт', 'веб-сайт', 'web'],
-      backend: ['node', 'express', 'nest', 'graphql', 'api', 'бэкенд', 'backend', 'серверн', 'go', 'golang', 'java', 'c#'],
+      bot: ['бот', 'bot', 'telegram', 'телеграм', 'тг', 'tma', 'mini app', 'мини апп', 'aiogram', 'telebot'],
+      frontend: ['react', 'vue', 'next', 'frontend', 'фронтенд', 'верстка', 'html', 'css', 'landing', 'лендинг', 'tilda', 'тильда', 'сайт', 'веб-сайт', 'web', 'tailwind'],
+      backend: ['node', 'express', 'nest', 'graphql', 'api', 'бэкенд', 'backend', 'серверн', 'go', 'golang', 'java', 'c#', 'php', 'laravel', 'sql', 'postgres'],
       mobile: ['flutter', 'флаттер', 'react native', 'ios', 'android', 'swift', 'kotlin', 'мобильн'],
       design: ['дизайн', 'дизайнер', 'figma', 'фигма', 'ui', 'ux', 'баннер', 'логотип', 'макет', 'иллюстрац', 'интерфейс'],
       '1c': ['1с', '1c', 'битрикс', 'bitrix', 'erp', 'учет', 'бухгалтер', 'предприяти'],
-      gamedev: ['unity', 'unreal', 'gamedev', 'геймдев', 'игра', '3d', 'blender', 'модель'],
+      gamedev: ['unity', 'unreal', 'gamedev', 'геймдев', 'игра', '3d', 'blender', 'модель', 'godot'],
       devops: ['docker', 'kubernetes', 'k8s', 'linux', 'ci/cd', 'сервер', 'devops', 'ansible', 'nginx'],
       marketing: ['seo', 'реклама', 'яндекс', 'директ', 'target', 'таргетинг', 'трафик', 'маркетинг', 'контекст'],
       analytics: ['power bi', 'tableau', 'дашборд', 'аналитик', 'sql', 'excel', 'bi', 'метрика'],
@@ -770,6 +770,19 @@
       }
     }
 
+    function persistSpecialties() {
+      try {
+        localStorage.setItem('leadradar_specialties', JSON.stringify([...selectedSpecialties]));
+        const kw = document.getElementById('filter-keywords')?.value || '';
+        const sw = document.getElementById('filter-stopwords')?.value || '';
+        fetch(`/api/user/${userId}/filters`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ keywords: kw, stop_words: sw, categories: [...selectedSpecialties].join(',') })
+        }).catch(() => {});
+      } catch (e) {}
+    }
+
     // SPECIALTY & INTEREST FILTERS
     function toggleSpecialtyTag(tag) {
       tg?.HapticFeedback?.selectionChanged();
@@ -782,6 +795,7 @@
           selectedSpecialties.add(tag);
         }
       }
+      persistSpecialties();
       syncSpecialtyUI();
       renderFeed();
     }
@@ -856,6 +870,7 @@
 
     function resetAllInterests() {
       selectedSpecialties.clear();
+      persistSpecialties();
       syncSpecialtyUI();
       renderFeed();
       toggleInterestsModal();
@@ -863,6 +878,7 @@
     }
 
     function applyInterestsAndClose() {
+      persistSpecialties();
       syncSpecialtyUI();
       renderFeed();
       toggleInterestsModal();
@@ -872,6 +888,7 @@
     function setSpecialtyFromAnalytics(spec) {
       selectedSpecialties.clear();
       selectedSpecialties.add(spec);
+      persistSpecialties();
       syncSpecialtyUI();
       navigateTo('feed');
     }
@@ -1109,6 +1126,28 @@
 
           document.getElementById('filter-keywords').value = filters.keywords || '';
           document.getElementById('filter-stopwords').value = filters.stop_words || '';
+
+          if (filters && filters.categories && filters.categories !== 'all' && filters.categories.trim()) {
+            selectedSpecialties.clear();
+            filters.categories.split(',').forEach(c => {
+              if (c.trim()) selectedSpecialties.add(c.trim());
+            });
+            syncSpecialtyUI();
+            renderFeed();
+          } else {
+            try {
+              const saved = localStorage.getItem('leadradar_specialties');
+              if (saved) {
+                const parsed = JSON.parse(saved);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                  selectedSpecialties.clear();
+                  parsed.forEach(s => selectedSpecialties.add(s));
+                  syncSpecialtyUI();
+                  renderFeed();
+                }
+              }
+            } catch (e) {}
+          }
         }
       } catch (e) {
         console.error(e);
@@ -1123,7 +1162,7 @@
         const res = await fetch(`/api/user/${userId}/filters`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ keywords, stop_words })
+          body: JSON.stringify({ keywords, stop_words, categories: [...selectedSpecialties].join(',') })
         });
         const data = await res.json();
         if (data.ok) {

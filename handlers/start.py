@@ -31,6 +31,19 @@ async def render_welcome(event: Message | CallbackQuery):
         referred_by=referred_by,
     )
 
+    if created and referred_by:
+        try:
+            from services.achievements import check_and_grant_achievements
+            await check_and_grant_achievements(referred_by, bot=event.bot)
+        except Exception:
+            pass
+
+    try:
+        from services.achievements import check_and_grant_achievements
+        await check_and_grant_achievements(user_id, bot=event.bot)
+    except Exception:
+        pass
+
     status = await get_user_status(user_id)
     is_active = getattr(db_user, "is_active", True)
 
@@ -102,7 +115,11 @@ async def toggle_leads_callback(callback: CallbackQuery):
     new_state = await toggle_user_active(callback.from_user.id)
     toast_msg = "▶️ Радар включен. Лиды снова поступают!" if new_state else "⏸ Радар на паузе. Лиды приостановлены."
     await callback.answer(toast_msg, show_alert=True)
-    await render_welcome(callback)
+    if callback.message and callback.message.text and "Профиль" in callback.message.text:
+        from handlers.profile import show_profile
+        await show_profile(callback)
+    else:
+        await render_welcome(callback)
 
 
 @router.callback_query(F.data == "back_to_menu")

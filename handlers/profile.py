@@ -12,6 +12,12 @@ router = Router()
 @router.callback_query(F.data == "open_profile")
 async def show_profile(event: Message | CallbackQuery):
     user_id = event.from_user.id
+    try:
+        from services.achievements import check_and_grant_achievements
+        await check_and_grant_achievements(user_id, bot=event.bot)
+    except Exception:
+        pass
+
     user = await get_user(user_id)
     status = await get_user_status(user_id)
 

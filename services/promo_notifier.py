@@ -7,6 +7,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo
 from config import settings
 from database.crud import (
     get_leads_count_last_hours,
+    get_user_filters,
     get_users_for_reactivation_promo,
     get_users_for_referral_promo,
     mark_promo_reactivation_sent,
@@ -105,15 +106,17 @@ class PromoNotifier:
         if not users:
             return
 
-        raw_count = await get_leads_count_last_hours(48)
-        missed_count = max(raw_count, 45)  # Realistic minimum indicator
-
-        logger.info(f"Found {len(users)} users for 48h reactivation promo (count={missed_count})")
+        total_recent_leads = await get_leads_count_last_hours(48)
+        logger.info(f"Found {len(users)} users for 48h reactivation promo (total_leads={total_recent_leads})")
 
         for user in users:
             try:
+                user_filter = await get_user_filters(user.telegram_id)
+                direction_count = await get_leads_count_last_hours(48, keywords=user_filter.keywords)
+                missed_count = max(direction_count, 15) if user_filter.keywords else max(total_recent_leads, 45)
+
                 text = (
-                    f"💡 <b>За последние 48 часов на биржах появилось {missed_count} новых заказов!</b>\n\n"
+                    f"💡 <b>За последние 48 часов на биржах появилось {missed_count} заказов по вашему направлению!</b>\n\n"
                     "Многие из них уже закрыты исполнителями, которые откликнулись в первые 3 минуты.\n\n"
                     "━━━━━━━━━━━━━━━━━━━━\n"
                     "⚡ <b>Не упускайте проекты:</b> включите мгновенный перехват или оформите <b>Premium за 250 Stars</b>, "

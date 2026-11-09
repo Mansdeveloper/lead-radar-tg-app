@@ -86,30 +86,31 @@ async def check_and_grant_achievements(user_id: int, bot: Bot | None = None) -> 
 
     # 2. Sniper (5 leads clicked)
     if "sniper" not in unlocked_keys:
-        if getattr(user, "total_leads_clicked", 0) >= 5:
+        if (user.total_leads_clicked or 0) >= 5:
             newly_unlocked.append("sniper")
 
     # 3. Networker (1 referral)
     if "networker" not in unlocked_keys:
-        if user.referral_count >= 1:
+        if (user.referral_count or 0) >= 1:
             newly_unlocked.append("networker")
 
     # 4. On fire (3 consecutive active days)
     if "on_fire" not in unlocked_keys:
-        if getattr(user, "consecutive_active_days", 0) >= 3:
+        if (user.consecutive_active_days or 0) >= 3:
             newly_unlocked.append("on_fire")
 
     # 5. OG user (14+ days since registration)
     if "og_user" not in unlocked_keys:
         user_created = user.created_at
-        if user_created.tzinfo is None:
-            user_created = user_created.replace(tzinfo=timezone.utc)
-        if (now - user_created).total_seconds() >= 14 * 86400:
-            newly_unlocked.append("og_user")
+        if user_created:
+            if user_created.tzinfo is None:
+                user_created = user_created.replace(tzinfo=timezone.utc)
+            if (now - user_created).total_seconds() >= 14 * 86400:
+                newly_unlocked.append("og_user")
 
     # 6. Recruiter (5 referrals)
     if "recruiter" not in unlocked_keys:
-        if user.referral_count >= 5:
+        if (user.referral_count or 0) >= 5:
             newly_unlocked.append("recruiter")
 
     if not newly_unlocked:
@@ -156,9 +157,9 @@ async def get_achievements_payload(user_id: int) -> dict:
     user = await get_user(user_id)
     unlocked_keys = set(await get_user_achievements(user_id))
 
-    total_clicks = getattr(user, "total_leads_clicked", 0) if user else 0
-    consec_days = getattr(user, "consecutive_active_days", 0) if user else 0
-    ref_count = user.referral_count if user else 0
+    total_clicks = (user.total_leads_clicked or 0) if user else 0
+    consec_days = (user.consecutive_active_days or 0) if user else 0
+    ref_count = (user.referral_count or 0) if user else 0
 
     items = []
     for key, cfg in ACHIEVEMENTS_CONFIG.items():

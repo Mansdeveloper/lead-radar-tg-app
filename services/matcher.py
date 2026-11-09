@@ -35,8 +35,11 @@ def matches_filter(lead_text: str, keywords_str: str, stop_words_str: str) -> bo
     return False
 
 
+import html
+
+
 def format_lead_message(
-    lead: RawLead, is_premium: bool = False, is_trial: bool = False
+    lead: RawLead, is_premium: bool = False, is_trial: bool = False, trial_hours: int = 24
 ) -> str:
     source_badges = {
         "fl_ru": "🟦 FL.ru",
@@ -49,7 +52,7 @@ def format_lead_message(
     if is_premium:
         badge = "⚡ <b>МГНОВЕННЫЙ ЛИД [PREMIUM]</b>"
     elif is_trial:
-        badge = "⚡ <b>МГНОВЕННЫЙ ЛИД [TRIAL 24ч]</b>"
+        badge = f"⚡ <b>МГНОВЕННЫЙ ЛИД [TRIAL {trial_hours}ч]</b>"
     else:
         badge = "⏳ <b>Лид доставлен с задержкой 15 мин [FREE]</b>"
 
@@ -57,20 +60,25 @@ def format_lead_message(
     if len(desc) > 300:
         desc = desc[:300].rstrip() + "..."
 
+    safe_title = html.escape(lead.title)
+    safe_desc = html.escape(desc)
+    safe_budget = html.escape(lead.budget)
+
     divider = "━━━━━━━━━━━━━━━━━━━━"
 
     message = (
         f"{badge}\n\n"
-        f"{source_name}  ·  💰 {lead.budget}\n\n"
+        f"{source_name}  ·  💰 {safe_budget}\n\n"
         f"{divider}\n\n"
-        f"📌 <b>{lead.title}</b>\n\n"
-        f"{desc}\n\n"
+        f"📌 <b>{safe_title}</b>\n\n"
+        f"{safe_desc}\n\n"
         f"{divider}\n\n"
     )
 
     if is_trial:
+        trial_desc = f"{trial_hours}-часовому" if trial_hours != 24 else "24-часовому"
         message += (
-            "<i>⚡ Лид доставлен без задержки благодаря 24-часовому Welcome Trial. "
+            f"<i>⚡ Лид доставлен без задержки благодаря {trial_desc} Welcome Trial. "
             "Чтобы закрепить 0-сек скорость навсегда — оформите /premium!</i>"
         )
     elif not is_premium:
@@ -123,7 +131,8 @@ async def dispatch_lead(bot: Bot, lead: RawLead) -> None:
             # Send immediately! (either Premium or 24h Welcome Trial)
             is_prem = status["is_premium"]
             is_tr = status["is_trial"]
-            text = format_lead_message(lead, is_premium=is_prem, is_trial=is_tr)
+            trial_hrs = status.get("trial_hours_left", 24)
+            text = format_lead_message(lead, is_premium=is_prem, is_trial=is_tr, trial_hours=trial_hrs)
             kb = build_lead_keyboard(lead, is_premium=is_prem, is_trial=is_tr)
             try:
                 await bot.send_message(

@@ -39,7 +39,7 @@ class TrialNotifier:
 
         logger.info(f"Found {len(users)} users with expired trial to notify")
         text = (
-            "⏳ <b>Ваш 24-часовой тест 0-секундного радара завершён.</b>\n\n"
+            "⏳ <b>Ваш Welcome Trial тест 0-секундного радара завершён.</b>\n\n"
             "Теперь новые заказы будут поступать с задержкой 15 минут.\n\n"
             "Чтобы продолжить перехватывать заказы первее конкурентов — включите <b>Premium за 250 Stars</b>."
         )

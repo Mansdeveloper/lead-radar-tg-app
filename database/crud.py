@@ -112,7 +112,7 @@ def compute_user_status(user: User | None) -> dict:
         "is_trial": is_trial,
         "trial_hours_left": trial_hours_left,
         "has_instant_delivery": is_prem or is_trial,
-        "is_active": getattr(user, "is_active", True),
+        "is_active": getattr(user, "is_active", True) is not False,
     }
 
 
@@ -291,13 +291,16 @@ async def get_recent_leads(
 
 
 async def update_user_full_filters(
-    telegram_id: int, keywords: str, stop_words: str, min_budget: int = 0
+    telegram_id: int, keywords: str, stop_words: str, min_budget: int = 0, categories: str | None = None
 ) -> None:
+    values = {"keywords": keywords, "stop_words": stop_words, "min_budget": min_budget}
+    if categories is not None:
+        values["categories"] = categories
     async with async_session() as session:
         await session.execute(
             update(UserFilter)
             .where(UserFilter.user_telegram_id == telegram_id)
-            .values(keywords=keywords, stop_words=stop_words, min_budget=min_budget)
+            .values(**values)
         )
         await session.commit()
 
@@ -386,10 +389,10 @@ async def record_lead_click(telegram_id: int) -> int:
         if not user:
             return 0
 
-        user.total_leads_clicked = getattr(user, "total_leads_clicked", 0) + 1
+        user.total_leads_clicked = (user.total_leads_clicked or 0) + 1
 
-        last_date = getattr(user, "last_active_date", None)
-        consec = getattr(user, "consecutive_active_days", 0)
+        last_date = user.last_active_date
+        consec = user.consecutive_active_days or 0
         if last_date == yesterday_str:
             user.consecutive_active_days = consec + 1
         elif last_date != today_str:
@@ -423,25 +426,43 @@ async def mark_promo_referral_sent(user_id: int) -> None:
 
 
 async def get_users_for_reactivation_promo() -> list[User]:
-    """Free users inactive/expired for 48 hours who haven't received reactivation promo"""
+    """Users registered/expired >= 48 hours ago who haven't received reactivation promo and are currently Free"""
     now = datetime.now(timezone.utc)
     cutoff = now - timedelta(hours=48)
     async with async_session() as session:
         query = select(User).where(
             User.promo_reactivation_sent == False,
-            User.is_premium == False,
             User.created_at <= cutoff,
         )
         result = await session.execute(query)
         users = list(result.scalars().all())
         eligible = []
         for u in users:
+            # 1. Skip if currently active paid premium
+            is_active_prem = False
+            if u.premium_until:
+                p = u.premium_until if u.premium_until.tzinfo else u.premium_until.replace(tzinfo=timezone.utc)
+                if p > now:
+                    is_active_prem = True
+            elif u.is_premium and not u.premium_until:
+                is_active_prem = True
+
+            if is_active_prem:
+                continue
+
+            # 2. Skip if currently active trial or trial expired < 48 hours ago
             if u.trial_until:
                 t = u.trial_until if u.trial_until.tzinfo else u.trial_until.replace(tzinfo=timezone.utc)
-                if t <= cutoff:
-                    eligible.append(u)
-            else:
-                eligible.append(u)
+                if t > now or t > cutoff:
+                    continue
+
+            # 3. Skip if premium expired < 48 hours ago
+            if u.premium_until:
+                p = u.premium_until if u.premium_until.tzinfo else u.premium_until.replace(tzinfo=timezone.utc)
+                if p > cutoff:
+                    continue
+
+            eligible.append(u)
         return eligible
 
 
@@ -453,11 +474,20 @@ async def mark_promo_reactivation_sent(user_id: int) -> None:
         await session.commit()
 
 
-async def get_leads_count_last_hours(hours: int = 48) -> int:
+async def get_leads_count_last_hours(hours: int = 48, keywords: str | None = None) -> int:
     now = datetime.now(timezone.utc)
     since = now - timedelta(hours=hours)
     async with async_session() as session:
         query = select(Lead).where(Lead.published_at >= since)
         result = await session.execute(query)
-        return len(result.scalars().all())
+        leads = list(result.scalars().all())
+        if not keywords or not keywords.strip():
+            return len(leads)
+        kw_list = [w.strip().lower() for w in keywords.split(",") if w.strip()]
+        if not kw_list:
+            return len(leads)
+        return sum(
+            1 for lead in leads
+            if any(kw in f"{lead.title} {lead.description}".lower() for kw in kw_list)
+        )
 

@@ -28,6 +28,12 @@ def _migrate_db(connection):
         if "last_active_date" not in cols:
             connection.execute(text("ALTER TABLE users ADD COLUMN last_active_date VARCHAR(10)"))
 
+        connection.execute(text("UPDATE users SET total_leads_clicked = 0 WHERE total_leads_clicked IS NULL"))
+        connection.execute(text("UPDATE users SET consecutive_active_days = 0 WHERE consecutive_active_days IS NULL"))
+        connection.execute(text("UPDATE users SET is_active = 1 WHERE is_active IS NULL"))
+        connection.execute(text("UPDATE users SET promo_referral_sent = 0 WHERE promo_referral_sent IS NULL"))
+        connection.execute(text("UPDATE users SET promo_reactivation_sent = 0 WHERE promo_reactivation_sent IS NULL"))
+
 
 async def init_db() -> None:
     async with engine.begin() as conn:

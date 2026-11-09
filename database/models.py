@@ -21,11 +21,11 @@ class User(Base):
     referral_count: Mapped[int] = mapped_column(Integer, default=0)
     daily_leads_sent: Mapped[int] = mapped_column(Integer, default=0)
     last_lead_date: Mapped[str | None] = mapped_column(String(10), nullable=True)  # YYYY-MM-DD
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    promo_referral_sent: Mapped[bool] = mapped_column(Boolean, default=False)
-    promo_reactivation_sent: Mapped[bool] = mapped_column(Boolean, default=False)
-    total_leads_clicked: Mapped[int] = mapped_column(Integer, default=0)
-    consecutive_active_days: Mapped[int] = mapped_column(Integer, default=0)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="1")
+    promo_referral_sent: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    promo_reactivation_sent: Mapped[bool] = mapped_column(Boolean, default=False, server_default="0")
+    total_leads_clicked: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    consecutive_active_days: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     last_active_date: Mapped[str | None] = mapped_column(String(10), nullable=True)  # YYYY-MM-DD
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc)

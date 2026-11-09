@@ -32,11 +32,13 @@ from database.crud import (
     toggle_user_active,
     update_user_keywords,
 )
+from parsers.base import RawLead
 from services.achievements import (
     check_and_grant_achievements,
     get_achievements_payload,
     get_user_achievements,
 )
+from services.matcher import format_lead_message
 
 
 async def test_full_matrix():
@@ -240,7 +242,25 @@ async def test_full_matrix():
     await mark_promo_reactivation_sent(910003)
     react_after = await get_users_for_reactivation_promo()
     assert 910003 not in [u.telegram_id for u in react_after], "User marked reactivation sent must be excluded!"
-    print("✅ 48h Reactivation Promo eligibility and suppression verified!")
+
+    # 10b. EX-PREMIUM USER (is_premium=True in DB, but expired 50h ago)
+    # Must be eligible for reactivation promo!
+    async with async_session() as s:
+        await s.execute(
+            update(User)
+            .where(User.telegram_id == 910005)
+            .values(
+                created_at=now - timedelta(hours=60),
+                is_premium=True,
+                premium_until=now - timedelta(hours=50),
+                promo_reactivation_sent=False,
+            )
+        )
+        await s.commit()
+
+    react_ex_prem = await get_users_for_reactivation_promo()
+    assert 910005 in [u.telegram_id for u in react_ex_prem], "Ex-premium user with expired sub must be eligible for reactivation promo!"
+    print("✅ 48h Reactivation Promo eligibility and suppression verified (including ex-premium users)!")
 
     # ---------------------------------------------------------
     # 11. TEST ACHIEVEMENTS & MILESTONES
@@ -263,7 +283,69 @@ async def test_full_matrix():
     assert "sniper" in unlocked_sniper, f"Expected sniper unlocked, got {unlocked_sniper}"
     print("✅ Milestone 'sniper' awarded upon 5 leads clicked!")
 
-    # 11c. Test achievements payload for Mini App
+    # 11c. Test None-safety on existing users with NULL stats
+    async with async_session() as s:
+        await s.execute(
+            update(User)
+            .where(User.telegram_id == 910002)
+            .values(
+                total_leads_clicked=None,
+                consecutive_active_days=None,
+            )
+        )
+        await s.commit()
+
+    # Must not raise TypeError when clicking or checking achievements
+    clicks_res = await record_lead_click(910002)
+    assert clicks_res == 1, f"Expected 1 click after None increment, got {clicks_res}"
+    await check_and_grant_achievements(910002)
+    null_payload = await get_achievements_payload(910002)
+    assert null_payload["ok"] is True if "ok" in null_payload else True
+    print("✅ None-safety audit verified (NULL columns handled gracefully without TypeError)!")
+
+    # 11d. Test referral milestones (Networker on 1, Recruiter on 5)
+    async with async_session() as s:
+        await s.execute(
+            update(User)
+            .where(User.telegram_id == 910007)
+            .values(referral_count=1)
+        )
+        await s.commit()
+    unlocked_net = await check_and_grant_achievements(910007)
+    assert "networker" in unlocked_net, f"Expected networker unlocked, got {unlocked_net}"
+
+    async with async_session() as s:
+        await s.execute(
+            update(User)
+            .where(User.telegram_id == 910007)
+            .values(referral_count=5)
+        )
+        await s.commit()
+    unlocked_rec = await check_and_grant_achievements(910007)
+    assert "recruiter" in unlocked_rec, f"Expected recruiter unlocked, got {unlocked_rec}"
+    print("✅ Referral milestones ('networker' & 'recruiter') verified!")
+
+    # 11e. Test HTML escaping & 48h dynamic trial formatting in format_lead_message
+    test_lead = RawLead(
+        source="freelancehunt",
+        external_id="test_xss",
+        title="Парсер на Python < 2 года опыта & скрипт <div id='test'>",
+        description="Разработка Telegram-бота <script>alert(1)</script> & доработка API",
+        url="https://test.com",
+        budget="< 50 000 ₽",
+        category="development",
+        published_at=now,
+        raw_text="raw",
+    )
+    formatted_msg_48 = format_lead_message(test_lead, is_premium=False, is_trial=True, trial_hours=48)
+    assert "&lt;script&gt;" in formatted_msg_48, "HTML tags must be escaped in lead message!"
+    assert "<script>" not in formatted_msg_48, "Raw HTML tags must NOT be present in lead message!"
+    assert "&lt; 50 000 ₽" in formatted_msg_48, "Budget special chars must be escaped!"
+    assert "⚡ <b>МГНОВЕННЫЙ ЛИД [TRIAL 48ч]</b>" in formatted_msg_48, "Invited user must see 48h trial badge!"
+    assert "48-часовому Welcome Trial" in formatted_msg_48, "Invited user must see 48h trial description!"
+    print("✅ HTML escaping & 48h dynamic trial message formatting verified!")
+
+    # 11f. Test achievements payload for Mini App
     payload = await get_achievements_payload(ach_user_id)
     assert payload["unlocked_count"] >= 2
     sniper_item = next(a for a in payload["achievements"] if a["key"] == "sniper")

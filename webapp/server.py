@@ -163,12 +163,14 @@ def create_webapp(bot: Bot) -> web.Application:
         keywords = body.get("keywords", "")
         stop_words = body.get("stop_words", "")
         min_budget = int(body.get("min_budget", 0))
+        categories = body.get("categories")
 
         await update_user_full_filters(
             telegram_id=user_id,
             keywords=keywords,
             stop_words=stop_words,
             min_budget=min_budget,
+            categories=categories,
         )
         await check_and_grant_achievements(user_id, bot=bot)
         return web.json_response({"ok": True, "message": "Filters saved"})
@@ -197,7 +199,6 @@ def create_webapp(bot: Bot) -> web.Application:
             currency="XTR",
             prices=prices,
         )
-
         return web.json_response({"ok": True, "invoice_link": link})
 
     # CORS & Routes
@@ -216,7 +217,5 @@ def create_webapp(bot: Bot) -> web.Application:
     app.router.add_post("/api/lead/click", click_lead_api)
     app.router.add_post("/api/user/{id}/filters", save_filters_api)
     app.router.add_post("/api/invoice", create_invoice_api)
-
-    return app
 
     return app
