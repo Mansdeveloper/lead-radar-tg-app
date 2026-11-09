@@ -15,6 +15,18 @@ def _migrate_db(connection):
             connection.execute(text("ALTER TABLE users ADD COLUMN trial_until DATETIME"))
         if "trial_expired_notified" not in cols:
             connection.execute(text("ALTER TABLE users ADD COLUMN trial_expired_notified BOOLEAN DEFAULT 0"))
+        if "is_active" not in cols:
+            connection.execute(text("ALTER TABLE users ADD COLUMN is_active BOOLEAN DEFAULT 1"))
+        if "promo_referral_sent" not in cols:
+            connection.execute(text("ALTER TABLE users ADD COLUMN promo_referral_sent BOOLEAN DEFAULT 0"))
+        if "promo_reactivation_sent" not in cols:
+            connection.execute(text("ALTER TABLE users ADD COLUMN promo_reactivation_sent BOOLEAN DEFAULT 0"))
+        if "total_leads_clicked" not in cols:
+            connection.execute(text("ALTER TABLE users ADD COLUMN total_leads_clicked INTEGER DEFAULT 0"))
+        if "consecutive_active_days" not in cols:
+            connection.execute(text("ALTER TABLE users ADD COLUMN consecutive_active_days INTEGER DEFAULT 0"))
+        if "last_active_date" not in cols:
+            connection.execute(text("ALTER TABLE users ADD COLUMN last_active_date VARCHAR(10)"))
 
 
 async def init_db() -> None:

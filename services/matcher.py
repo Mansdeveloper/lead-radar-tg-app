@@ -53,12 +53,19 @@ def format_lead_message(
     else:
         badge = "⏳ <b>Лид доставлен с задержкой 15 мин [FREE]</b>"
 
+    desc = lead.description.strip()
+    if len(desc) > 300:
+        desc = desc[:300].rstrip() + "..."
+
+    divider = "━━━━━━━━━━━━━━━━━━━━"
+
     message = (
-        f"{badge}\n"
-        f"<b>Источник:</b> {source_name}\n"
-        f"<b>Бюджет:</b> 💰 {lead.budget}\n\n"
+        f"{badge}\n\n"
+        f"{source_name}  ·  💰 {lead.budget}\n\n"
+        f"{divider}\n\n"
         f"📌 <b>{lead.title}</b>\n\n"
-        f"{lead.description}\n\n"
+        f"{desc}\n\n"
+        f"{divider}\n\n"
     )
 
     if is_trial:

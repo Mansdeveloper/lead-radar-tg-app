@@ -21,7 +21,24 @@ class User(Base):
     referral_count: Mapped[int] = mapped_column(Integer, default=0)
     daily_leads_sent: Mapped[int] = mapped_column(Integer, default=0)
     last_lead_date: Mapped[str | None] = mapped_column(String(10), nullable=True)  # YYYY-MM-DD
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    promo_referral_sent: Mapped[bool] = mapped_column(Boolean, default=False)
+    promo_reactivation_sent: Mapped[bool] = mapped_column(Boolean, default=False)
+    total_leads_clicked: Mapped[int] = mapped_column(Integer, default=0)
+    consecutive_active_days: Mapped[int] = mapped_column(Integer, default=0)
+    last_active_date: Mapped[str | None] = mapped_column(String(10), nullable=True)  # YYYY-MM-DD
     created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=lambda: datetime.now(timezone.utc)
+    )
+
+
+class Achievement(Base):
+    __tablename__ = "achievements"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_telegram_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    achievement_key: Mapped[str] = mapped_column(String(64), index=True)
+    unlocked_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc)
     )
 

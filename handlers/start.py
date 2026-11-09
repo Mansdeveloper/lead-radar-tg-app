@@ -3,7 +3,7 @@ from aiogram.filters import CommandStart
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message, WebAppInfo
 
 from config import settings
-from database.crud import get_or_create_user, get_user_status
+from database.crud import get_or_create_user, get_user, get_user_status, toggle_user_active
 
 router = Router()
 
@@ -32,36 +32,30 @@ async def render_welcome(event: Message | CallbackQuery):
     )
 
     status = await get_user_status(user_id)
+    is_active = getattr(db_user, "is_active", True)
+
     if status["is_premium"]:
         sub_text = "⚡ <b>PREMIUM</b> (0 сек задержка, безлимит)"
     elif status["is_trial"]:
         hours = status["trial_hours_left"]
-        sub_text = f"⚡ <b>WELCOME TRIAL 24ч: 0 сек задержка АКТИВНА</b> (осталось ~{hours}ч)!"
+        sub_text = f"⚡ <b>WELCOME TRIAL {hours}ч</b> (0 сек задержка активна)"
     else:
         sub_text = (
             f"⏳ <b>FREE</b> (задержка {settings.FREE_DELAY_SECONDS // 60} мин, "
             f"до {settings.FREE_MAX_DAILY_LEADS} лидов/день)"
         )
 
+    radar_status_text = "🟢 <b>АКТИВЕН</b> (лиды приходят)" if is_active else "⏸ <b>НА ПАУЗЕ</b> (лиды отключены)"
+
     welcome_text = (
         "👋 <b>Добро пожаловать в Lead Radar!</b>\n\n"
-        "⚡ <b>Что делает бот:</b>\n"
-        "В реальном времени сканирует биржи фриланса (Хабр Фриланс, FL.ru, Freelancehunt) и присылает горячие заказы "
-        "прямо вам в Telegram за пару секунд с момента их публикации заказчиком.\n\n"
-        "🎯 <b>Во фрилансе побеждает первый:</b> отклик в первые 3 минуты повышает вероятность взять заказ на 80%.\n\n"
-        f"📊 <b>Ваш статус:</b> {sub_text}\n\n"
-    )
-
-    if status["is_trial"]:
-        welcome_text += (
-            "🎁 <b>Вам активирован 24-часовой Welcome Trial!</b>\n"
-            "Все новые заказы будут поступать вам <b>мгновенно (0 секунд задержки)</b>, "
-            "чтобы вы оценили преимущество перехвата заказов первее конкурентов.\n\n"
-        )
-
-    welcome_text += (
-        "🚀 <i>Хотите закрепить мгновенные уведомления без задержки и безлимит?</i>\n"
-        "Оформите <b>Premium</b> или пригласите коллегу по реферальной ссылке и получите <b>+7 дней Premium бесплатно</b>!"
+        "⚡ <b>Перехват заказов с фриланс-бирж в реальном времени.</b>\n"
+        "Мониторинг FL.ru, Freelancehunt, Хабр Фриланс за 0–2 секунды с момента публикации.\n\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        f"📊 <b>Тариф:</b> {sub_text}\n"
+        f"📡 <b>Статус радара:</b> {radar_status_text}\n"
+        "━━━━━━━━━━━━━━━━━━━━\n\n"
+        "💡 <i>Отклик в первые 3 минуты повышает вероятность взять заказ на 80%.</i>"
     )
 
     buttons = []
@@ -71,14 +65,18 @@ async def render_welcome(event: Message | CallbackQuery):
         )
 
     prem_btn_text = "⚡ Закрепить 0 сек" if status["is_trial"] else "⚡ Включить Premium"
+    toggle_btn_text = "⏸ Приостановить лиды" if is_active else "▶️ Возобновить лиды"
 
     buttons.extend([
         [
-            InlineKeyboardButton(text="🎯 Настроить фильтры", callback_data="open_filters"),
+            InlineKeyboardButton(text="🎯 Фильтры", callback_data="open_filters"),
             InlineKeyboardButton(text=prem_btn_text, callback_data="buy_premium"),
         ],
         [
-            InlineKeyboardButton(text="👤 Мой профиль / Рефералы", callback_data="open_profile"),
+            InlineKeyboardButton(text=toggle_btn_text, callback_data="toggle_leads"),
+        ],
+        [
+            InlineKeyboardButton(text="👤 Профиль и Рефералы", callback_data="open_profile"),
         ],
     ])
 
@@ -97,6 +95,14 @@ async def render_welcome(event: Message | CallbackQuery):
 @router.message(CommandStart())
 async def cmd_start(message: Message):
     await render_welcome(message)
+
+
+@router.callback_query(F.data == "toggle_leads")
+async def toggle_leads_callback(callback: CallbackQuery):
+    new_state = await toggle_user_active(callback.from_user.id)
+    toast_msg = "▶️ Радар включен. Лиды снова поступают!" if new_state else "⏸ Радар на паузе. Лиды приостановлены."
+    await callback.answer(toast_msg, show_alert=True)
+    await render_welcome(callback)
 
 
 @router.callback_query(F.data == "back_to_menu")

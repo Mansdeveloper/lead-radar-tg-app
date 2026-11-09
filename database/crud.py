@@ -2,6 +2,7 @@ import math
 from datetime import date, datetime, timedelta, timezone
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from config import settings
 from database.models import Lead, User, UserFilter
 from database.session import async_session
 
@@ -15,12 +16,15 @@ async def get_or_create_user(
         created = False
         now = datetime.now(timezone.utc)
         if not user:
+            is_valid_ref = bool(referred_by and referred_by != telegram_id)
+            bonus_hours = settings.TRIAL_HOURS_REFERRAL if is_valid_ref else settings.TRIAL_HOURS_DEFAULT
             user = User(
                 telegram_id=telegram_id,
                 username=username,
-                referred_by=referred_by if referred_by != telegram_id else None,
-                trial_until=now + timedelta(hours=24),
+                referred_by=referred_by if is_valid_ref else None,
+                trial_until=now + timedelta(hours=bonus_hours),
                 trial_expired_notified=False,
+                is_active=True,
             )
             session.add(user)
             await session.commit()
@@ -77,6 +81,7 @@ def compute_user_status(user: User | None) -> dict:
             "is_trial": False,
             "trial_hours_left": 0,
             "has_instant_delivery": False,
+            "is_active": True,
         }
 
     now = datetime.now(timezone.utc)
@@ -107,7 +112,23 @@ def compute_user_status(user: User | None) -> dict:
         "is_trial": is_trial,
         "trial_hours_left": trial_hours_left,
         "has_instant_delivery": is_prem or is_trial,
+        "is_active": getattr(user, "is_active", True),
     }
+
+
+async def toggle_user_active(telegram_id: int, is_active: bool | None = None) -> bool:
+    async with async_session() as session:
+        result = await session.execute(select(User).where(User.telegram_id == telegram_id))
+        user = result.scalar_one_or_none()
+        if not user:
+            return True
+        if is_active is None:
+            user.is_active = not user.is_active
+        else:
+            user.is_active = is_active
+        new_val = user.is_active
+        await session.commit()
+        return new_val
 
 
 async def get_user_status(telegram_id: int) -> dict:
@@ -245,8 +266,10 @@ async def save_lead(
 
 async def get_all_subscribers_with_filters() -> list[tuple[User, UserFilter]]:
     async with async_session() as session:
-        query = select(User, UserFilter).join(
-            UserFilter, User.telegram_id == UserFilter.user_telegram_id
+        query = (
+            select(User, UserFilter)
+            .join(UserFilter, User.telegram_id == UserFilter.user_telegram_id)
+            .where(User.is_active == True)
         )
         result = await session.execute(query)
         return list(result.all())
@@ -325,4 +348,116 @@ async def mark_trial_expired_notified(user_id: int) -> None:
             .values(trial_expired_notified=True)
         )
         await session.commit()
+
+
+async def add_bonus_hours_to_user(telegram_id: int, hours: int) -> None:
+    now = datetime.now(timezone.utc)
+    async with async_session() as session:
+        result = await session.execute(select(User).where(User.telegram_id == telegram_id))
+        user = result.scalar_one_or_none()
+        if not user:
+            return
+
+        if user.premium_until:
+            target = user.premium_until if user.premium_until.tzinfo else user.premium_until.replace(tzinfo=timezone.utc)
+            if target > now:
+                user.premium_until = target + timedelta(hours=hours)
+                await session.commit()
+                return
+
+        if user.trial_until:
+            target_t = user.trial_until if user.trial_until.tzinfo else user.trial_until.replace(tzinfo=timezone.utc)
+            if target_t > now:
+                user.trial_until = target_t + timedelta(hours=hours)
+                await session.commit()
+                return
+
+        user.trial_until = now + timedelta(hours=hours)
+        user.trial_expired_notified = False
+        await session.commit()
+
+
+async def record_lead_click(telegram_id: int) -> int:
+    today_str = date.today().isoformat()
+    yesterday_str = (date.today() - timedelta(days=1)).isoformat()
+    async with async_session() as session:
+        result = await session.execute(select(User).where(User.telegram_id == telegram_id))
+        user = result.scalar_one_or_none()
+        if not user:
+            return 0
+
+        user.total_leads_clicked = getattr(user, "total_leads_clicked", 0) + 1
+
+        last_date = getattr(user, "last_active_date", None)
+        consec = getattr(user, "consecutive_active_days", 0)
+        if last_date == yesterday_str:
+            user.consecutive_active_days = consec + 1
+        elif last_date != today_str:
+            user.consecutive_active_days = 1
+
+        user.last_active_date = today_str
+        clicks = user.total_leads_clicked
+        await session.commit()
+        return clicks
+
+
+async def get_users_for_referral_promo() -> list[User]:
+    """Users registered >= 2 hours ago who haven't received referral promo yet"""
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(hours=2)
+    async with async_session() as session:
+        query = select(User).where(
+            User.created_at <= cutoff,
+            User.promo_referral_sent == False,
+        )
+        result = await session.execute(query)
+        return list(result.scalars().all())
+
+
+async def mark_promo_referral_sent(user_id: int) -> None:
+    async with async_session() as session:
+        await session.execute(
+            update(User).where(User.telegram_id == user_id).values(promo_referral_sent=True)
+        )
+        await session.commit()
+
+
+async def get_users_for_reactivation_promo() -> list[User]:
+    """Free users inactive/expired for 48 hours who haven't received reactivation promo"""
+    now = datetime.now(timezone.utc)
+    cutoff = now - timedelta(hours=48)
+    async with async_session() as session:
+        query = select(User).where(
+            User.promo_reactivation_sent == False,
+            User.is_premium == False,
+            User.created_at <= cutoff,
+        )
+        result = await session.execute(query)
+        users = list(result.scalars().all())
+        eligible = []
+        for u in users:
+            if u.trial_until:
+                t = u.trial_until if u.trial_until.tzinfo else u.trial_until.replace(tzinfo=timezone.utc)
+                if t <= cutoff:
+                    eligible.append(u)
+            else:
+                eligible.append(u)
+        return eligible
+
+
+async def mark_promo_reactivation_sent(user_id: int) -> None:
+    async with async_session() as session:
+        await session.execute(
+            update(User).where(User.telegram_id == user_id).values(promo_reactivation_sent=True)
+        )
+        await session.commit()
+
+
+async def get_leads_count_last_hours(hours: int = 48) -> int:
+    now = datetime.now(timezone.utc)
+    since = now - timedelta(hours=hours)
+    async with async_session() as session:
+        query = select(Lead).where(Lead.published_at >= since)
+        result = await session.execute(query)
+        return len(result.scalars().all())
 

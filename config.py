@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     
     # Referral reward (days of premium per referral)
     REFERRAL_PREMIUM_DAYS: int = 7
+    TRIAL_HOURS_DEFAULT: int = 24
+    TRIAL_HOURS_REFERRAL: int = 48
 
     # WebApp & API settings
     WEBAPP_HOST: str = "0.0.0.0"

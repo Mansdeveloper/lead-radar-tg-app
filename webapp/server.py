@@ -12,8 +12,11 @@ from database.crud import (
     get_user,
     get_user_filters,
     get_user_status,
+    record_lead_click,
+    toggle_user_active,
     update_user_full_filters,
 )
+from services.achievements import check_and_grant_achievements, get_achievements_payload
 
 logger = logging.getLogger("WebAppServer")
 WEBAPP_DIR = Path(__file__).parent
@@ -90,6 +93,7 @@ def create_webapp(bot: Bot) -> web.Application:
                     "trial_hours_left": status["trial_hours_left"],
                     "trial_until": user.trial_until.isoformat() if user.trial_until else None,
                     "has_instant_delivery": status["has_instant_delivery"],
+                    "is_active": getattr(user, "is_active", True),
                     "premium_until": user.premium_until.strftime("%d.%m.%Y")
                     if user.premium_until
                     else None,
@@ -106,6 +110,45 @@ def create_webapp(bot: Bot) -> web.Application:
                 },
             }
         )
+
+    async def toggle_active_api(request: web.Request) -> web.Response:
+        user_id_str = request.match_info.get("id")
+        try:
+            user_id = int(user_id_str)
+            if user_id <= 0:
+                raise ValueError("User ID must be positive")
+        except (ValueError, TypeError):
+            return web.json_response({"ok": False, "error": "Invalid user ID"}, status=400)
+
+        new_val = await toggle_user_active(user_id)
+        return web.json_response({"ok": True, "is_active": new_val})
+
+    async def get_achievements_api(request: web.Request) -> web.Response:
+        user_id_str = request.match_info.get("id")
+        try:
+            user_id = int(user_id_str)
+            if user_id <= 0:
+                raise ValueError("User ID must be positive")
+        except (ValueError, TypeError):
+            return web.json_response({"ok": False, "error": "Invalid user ID"}, status=400)
+
+        # Check and grant before returning
+        await check_and_grant_achievements(user_id, bot=bot)
+        payload = await get_achievements_payload(user_id)
+        return web.json_response({"ok": True, **payload})
+
+    async def click_lead_api(request: web.Request) -> web.Response:
+        try:
+            body = await request.json()
+            user_id = int(body.get("user_id", 0))
+            if user_id <= 0:
+                raise ValueError("Invalid user ID")
+        except Exception as e:
+            return web.json_response({"ok": False, "error": str(e)}, status=400)
+
+        clicks = await record_lead_click(user_id)
+        newly_unlocked = await check_and_grant_achievements(user_id, bot=bot)
+        return web.json_response({"ok": True, "total_clicks": clicks, "unlocked": newly_unlocked})
 
     async def save_filters_api(request: web.Request) -> web.Response:
         user_id_str = request.match_info.get("id")
@@ -127,6 +170,7 @@ def create_webapp(bot: Bot) -> web.Application:
             stop_words=stop_words,
             min_budget=min_budget,
         )
+        await check_and_grant_achievements(user_id, bot=bot)
         return web.json_response({"ok": True, "message": "Filters saved"})
 
     async def create_invoice_api(request: web.Request) -> web.Response:
@@ -167,7 +211,12 @@ def create_webapp(bot: Bot) -> web.Application:
     app.router.add_get("/", handle_index)
     app.router.add_get("/api/leads", get_leads_api)
     app.router.add_get("/api/user/{id}", get_user_api)
+    app.router.add_post("/api/user/{id}/toggle_active", toggle_active_api)
+    app.router.add_get("/api/user/{id}/achievements", get_achievements_api)
+    app.router.add_post("/api/lead/click", click_lead_api)
     app.router.add_post("/api/user/{id}/filters", save_filters_api)
     app.router.add_post("/api/invoice", create_invoice_api)
+
+    return app
 
     return app

@@ -9,6 +9,7 @@ from database.crud import (
     update_user_keywords,
     update_user_stop_words,
 )
+from services.achievements import check_and_grant_achievements
 
 router = Router()
 
@@ -86,6 +87,7 @@ async def process_keywords(message: Message, state: FSMContext):
         keywords = text
 
     await update_user_keywords(message.from_user.id, keywords)
+    await check_and_grant_achievements(message.from_user.id, bot=message.bot)
     await state.clear()
     await message.answer("✅ Ключевые слова успешно обновлены!")
     await show_filters(message)
@@ -112,6 +114,7 @@ async def process_stop_words(message: Message, state: FSMContext):
         stop_words = text
 
     await update_user_stop_words(message.from_user.id, stop_words)
+    await check_and_grant_achievements(message.from_user.id, bot=message.bot)
     await state.clear()
     await message.answer("✅ Стоп-слова успешно обновлены!")
     await show_filters(message)

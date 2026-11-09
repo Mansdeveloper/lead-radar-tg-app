@@ -11,6 +11,7 @@ from config import settings
 from database.session import init_db
 from handlers import filters, payments, profile, start
 from parsers.manager import IngestionManager
+from services.promo_notifier import PromoNotifier
 from services.trial_notifier import TrialNotifier
 from webapp.server import create_webapp
 
@@ -65,6 +66,10 @@ async def main():
     trial_notifier = TrialNotifier(bot=bot, check_interval_seconds=60)
     trial_task = asyncio.create_task(trial_notifier.start())
 
+    # Start Promo Notifier Background Service (2h Referral & 48h Reactivation)
+    promo_notifier = PromoNotifier(bot=bot, check_interval_seconds=60)
+    promo_task = asyncio.create_task(promo_notifier.start())
+
     # Start Embedded WebApp / REST API server
     webapp_app = create_webapp(bot=bot)
     runner = web.AppRunner(webapp_app)
@@ -79,6 +84,8 @@ async def main():
     try:
         await dp.start_polling(bot)
     finally:
+        promo_notifier.stop()
+        promo_task.cancel()
         trial_notifier.stop()
         trial_task.cancel()
         ingestion.stop()
