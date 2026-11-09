@@ -397,39 +397,32 @@
 
   </main>
 
-  <!-- FLOATING ISLAND NAVIGATION DOCK (Detached island with auto-hide on scroll) -->
-  <div class="fixed bottom-4 inset-x-4 max-w-xs mx-auto z-50 pointer-events-none transition-all duration-300" id="island-nav-wrapper">
-    <nav class="pointer-events-auto bg-[#171720]/95 backdrop-blur-2xl border border-white/[0.12] rounded-full px-5 py-2.5 shadow-[0_12px_40px_rgba(0,0,0,0.65)] flex justify-between items-center transition-all duration-300" id="island-nav">
+  <!-- FLOATING ISLAND NAVIGATION DOCK (Automotive luxury pill island with high-contrast active capsule) -->
+  <div class="fixed bottom-5 inset-x-3 max-w-[345px] mx-auto z-50 pointer-events-none transition-all duration-300" id="island-nav-wrapper">
+    <nav class="pointer-events-auto bg-[#14141E]/95 backdrop-blur-2xl border border-white/[0.14] rounded-[30px] p-1.5 shadow-[0_20px_50px_rgba(0,0,0,0.85),0_0_0_1px_rgba(255,255,255,0.06)] grid grid-cols-4 gap-1.5 items-center transition-all duration-300" id="island-nav">
       <!-- 1. Radar / Feed -->
-      <button onclick="navigateTo('feed')" id="nav-btn-feed" class="flex flex-col items-center text-white transition-all">
-        <div class="w-9 h-7 rounded-full bg-white/[0.15] flex items-center justify-center transition-all" id="nav-pill-feed">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-        </div>
-        <span class="text-[9px] font-extrabold font-display mt-0.5">Радар</span>
+      <button onclick="navigateTo('feed')" id="nav-btn-feed" class="h-[54px] rounded-[24px] bg-white text-zinc-950 font-black shadow-[0_8px_25px_rgba(255,255,255,0.22)] flex flex-col items-center justify-center transition-all duration-200 active:scale-95 group">
+        <svg class="w-5 h-5 stroke-[2.3] text-zinc-950 transition-transform group-hover:scale-105" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+        <span class="text-[10px] font-black font-display tracking-tight mt-0.5 text-zinc-950">Радар</span>
       </button>
 
       <!-- 2. Analytics -->
-      <button onclick="navigateTo('analytics')" id="nav-btn-analytics" class="flex flex-col items-center text-zinc-500 hover:text-zinc-300 transition-all">
-        <div class="w-9 h-7 rounded-full flex items-center justify-center transition-all" id="nav-pill-analytics">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-        </div>
-        <span class="text-[9px] font-extrabold font-display mt-0.5">Рынок</span>
+      <button onclick="navigateTo('analytics')" id="nav-btn-analytics" class="h-[54px] rounded-[24px] text-zinc-400 hover:text-white hover:bg-white/[0.04] flex flex-col items-center justify-center transition-all duration-200 active:scale-95 group">
+        <svg class="w-5 h-5 stroke-[1.8] text-zinc-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+        <span class="text-[10px] font-semibold font-display tracking-tight mt-0.5 text-zinc-400 group-hover:text-white transition-colors">Рынок</span>
       </button>
 
       <!-- 3. Filters -->
-      <button onclick="navigateTo('filters')" id="nav-btn-filters" class="flex flex-col items-center text-zinc-500 hover:text-zinc-300 transition-all">
-        <div class="w-9 h-7 rounded-full flex items-center justify-center transition-all" id="nav-pill-filters">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
-        </div>
-        <span class="text-[9px] font-extrabold font-display mt-0.5">Фильтры</span>
+      <button onclick="navigateTo('filters')" id="nav-btn-filters" class="h-[54px] rounded-[24px] text-zinc-400 hover:text-white hover:bg-white/[0.04] flex flex-col items-center justify-center transition-all duration-200 active:scale-95 relative group">
+        <div id="nav-filter-dot" class="hidden absolute top-2 right-4 w-2 h-2 rounded-full bg-lime-400 ring-2 ring-[#14141E]"></div>
+        <svg class="w-5 h-5 stroke-[1.8] text-zinc-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+        <span class="text-[10px] font-semibold font-display tracking-tight mt-0.5 text-zinc-400 group-hover:text-white transition-colors">Фильтры</span>
       </button>
 
       <!-- 4. Premium -->
-      <button onclick="navigateTo('premium')" id="nav-btn-premium" class="flex flex-col items-center text-zinc-500 hover:text-zinc-300 transition-all">
-        <div class="w-9 h-7 rounded-full flex items-center justify-center transition-all" id="nav-pill-premium">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
-        </div>
-        <span class="text-[9px] font-extrabold font-display mt-0.5">Тариф</span>
+      <button onclick="navigateTo('premium')" id="nav-btn-premium" class="h-[54px] rounded-[24px] text-zinc-400 hover:text-white hover:bg-white/[0.04] flex flex-col items-center justify-center transition-all duration-200 active:scale-95 group">
+        <svg class="w-5 h-5 stroke-[1.8] text-zinc-400 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
+        <span class="text-[10px] font-semibold font-display tracking-tight mt-0.5 text-zinc-400 group-hover:text-white transition-colors">Тариф</span>
       </button>
     </nav>
   </div>
@@ -568,13 +561,18 @@
       ['feed', 'analytics', 'filters', 'premium'].forEach(t => {
         document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tabName);
         const btn = document.getElementById(`nav-btn-${t}`);
-        const pill = document.getElementById(`nav-pill-${t}`);
+        if (!btn) return;
+        const svg = btn.querySelector('svg');
+        const span = btn.querySelector('span');
+
         if (t === tabName) {
-          btn.className = 'flex flex-col items-center text-white transition-all';
-          pill.className = 'w-9 h-7 rounded-full bg-white/[0.15] flex items-center justify-center transition-all';
+          btn.className = 'h-[54px] rounded-[24px] bg-white text-zinc-950 font-black shadow-[0_8px_25px_rgba(255,255,255,0.22)] flex flex-col items-center justify-center transition-all duration-200 active:scale-95 group';
+          if (svg) svg.className = 'w-5 h-5 stroke-[2.3] text-zinc-950 transition-transform group-hover:scale-105';
+          if (span) span.className = 'text-[10px] font-black font-display tracking-tight mt-0.5 text-zinc-950';
         } else {
-          btn.className = 'flex flex-col items-center text-zinc-500 hover:text-zinc-300 transition-all';
-          pill.className = 'w-9 h-7 rounded-full flex items-center justify-center transition-all';
+          btn.className = 'h-[54px] rounded-[24px] text-zinc-400 hover:text-white hover:bg-white/[0.04] flex flex-col items-center justify-center transition-all duration-200 active:scale-95 relative group';
+          if (svg) svg.className = 'w-5 h-5 stroke-[1.8] text-zinc-400 group-hover:text-white transition-colors';
+          if (span) span.className = 'text-[10px] font-semibold font-display tracking-tight mt-0.5 text-zinc-400 group-hover:text-white transition-colors';
         }
       });
 
@@ -647,6 +645,10 @@
           }
         }
       });
+      const navFilterDot = document.getElementById('nav-filter-dot');
+      if (navFilterDot) {
+        navFilterDot.classList.toggle('hidden', selectedSpecialties.size === 0);
+      }
       updateModalTagUI();
     }
 
