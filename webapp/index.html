@@ -63,7 +63,7 @@
   <header class="sticky top-0 z-40 bg-[#0D0D12]/90 backdrop-blur-2xl px-4 py-2.5 safe-top flex items-center justify-between border-b border-white/[0.06]">
     <div class="flex items-center space-x-2.5">
       <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-accent-coral via-accent-yellow to-accent-lime p-0.5 overflow-hidden shadow-sm">
-        <img id="user-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80" class="w-full h-full object-cover rounded-full bg-zinc-800" alt="Avatar">
+        <img id="user-avatar" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%231F1F2C'/><circle cx='50' cy='38' r='18' fill='%236366F1'/><path d='M24 82 C24 64, 36 58, 50 58 C64 58, 76 64, 76 82 Z' fill='%236366F1'/></svg>" class="w-full h-full object-cover rounded-full bg-zinc-800" alt="Avatar">
       </div>
       <div>
         <p class="text-[11px] text-zinc-400 font-medium leading-none">Привет, <span id="user-name" class="text-zinc-200 font-bold">Фрилансер</span>!</p>
@@ -423,7 +423,7 @@
       <div class="rounded-[28px] p-5 bg-gradient-to-br from-[#1A1A26] to-[#12121A] border border-white/[0.1] shadow-xl space-y-4">
         <div class="flex items-center space-x-3.5">
           <div class="w-14 h-14 rounded-full bg-gradient-to-tr from-accent-coral via-accent-yellow to-accent-lime p-0.5 overflow-hidden shadow-md flex-shrink-0">
-            <img id="profile-user-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80" class="w-full h-full object-cover rounded-full bg-zinc-800" alt="Avatar">
+            <img id="profile-user-avatar" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%231F1F2C'/><circle cx='50' cy='38' r='18' fill='%236366F1'/><path d='M24 82 C24 64, 36 58, 50 58 C64 58, 76 64, 76 82 Z' fill='%236366F1'/></svg>" class="w-full h-full object-cover rounded-full bg-zinc-800" alt="Avatar">
           </div>
           <div class="flex-1 min-w-0">
             <h3 class="text-base font-black font-display text-white truncate" id="profile-user-name">Фрилансер</h3>
@@ -624,9 +624,19 @@
       tg.expand();
       if (tg.initDataUnsafe?.user) {
         const u = tg.initDataUnsafe.user;
-        document.getElementById('user-name').textContent = u.first_name || 'Фрилансер';
+        const displayName = u.first_name ? `${u.first_name}${u.last_name ? ' ' + u.last_name : ''}` : 'Фрилансер';
+        const userNameEl = document.getElementById('user-name');
+        if (userNameEl) userNameEl.textContent = u.first_name || 'Фрилансер';
+        const profNameEl = document.getElementById('profile-user-name');
+        if (profNameEl) profNameEl.textContent = displayName;
+        const profIdEl = document.getElementById('profile-user-id');
+        if (profIdEl) profIdEl.textContent = `ID: ${u.id}`;
+
         if (u.photo_url) {
-          document.getElementById('user-avatar').src = u.photo_url;
+          const headerAvatar = document.getElementById('user-avatar');
+          if (headerAvatar) headerAvatar.src = u.photo_url;
+          const profAvatar = document.getElementById('profile-user-avatar');
+          if (profAvatar) profAvatar.src = u.photo_url;
         }
       }
     }
@@ -1121,7 +1131,14 @@
           if (profId) profId.textContent = `ID: ${user.id}`;
           const profName = document.getElementById('profile-user-name');
           if (profName && tg?.initDataUnsafe?.user) {
-            profName.textContent = tg.initDataUnsafe.user.first_name || 'Фрилансер';
+            const u = tg.initDataUnsafe.user;
+            profName.textContent = u.first_name ? `${u.first_name}${u.last_name ? ' ' + u.last_name : ''}` : 'Фрилансер';
+          }
+          if (tg?.initDataUnsafe?.user?.photo_url) {
+            const profAvatar = document.getElementById('profile-user-avatar');
+            if (profAvatar) profAvatar.src = tg.initDataUnsafe.user.photo_url;
+            const headerAvatar = document.getElementById('user-avatar');
+            if (headerAvatar) headerAvatar.src = tg.initDataUnsafe.user.photo_url;
           }
 
           document.getElementById('filter-keywords').value = filters.keywords || '';
