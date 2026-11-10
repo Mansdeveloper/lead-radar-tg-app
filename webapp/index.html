@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#F6F7FB" id="meta-theme-color">
   <title>Lead Radar — Operational Intelligence</title>
   <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -72,11 +74,11 @@
     }
     /* Safe Area Top Spacing: Leaves room for Telegram native close, dynamic island and 3-dots */
     .safe-top-space {
-      padding-top: calc(max(env(safe-area-inset-top, 0px), 16px) + 8px);
+      padding-top: calc(max(var(--tg-content-safe-area-inset-top, 0px), var(--tg-safe-area-inset-top, 0px), env(safe-area-inset-top, 0px), 20px) + 36px);
     }
     /* Bottom padding ensuring last cards are never obscured by floating dock */
     .safe-bottom-pad {
-      padding-bottom: calc(7rem + env(safe-area-inset-bottom, 24px));
+      padding-bottom: calc(7rem + max(var(--tg-safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 24px)));
     }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -98,7 +100,7 @@
       <div class="space-y-2.5">
         <div class="flex items-center space-x-2">
           <!-- Search input -->
-          <div class="relative flex-1">
+          <div class="relative flex-1 min-w-0">
             <svg class="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
             </svg>
@@ -197,7 +199,7 @@
             <h2 class="text-2xl sm:text-3xl font-black font-display tracking-tight text-zinc-900 dark:text-white" id="feed-volume-sum">
               485,000 ₽
             </h2>
-            <span class="text-xs font-bold bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-md font-display">+14 сделок</span>
+            <span class="text-xs font-bold bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-md font-display" id="feed-deals-count">+14 сделок</span>
           </div>
         </div>
 
@@ -443,7 +445,7 @@
       <div class="rounded-[28px] p-5 bg-white dark:bg-[#171720] border border-zinc-200/80 dark:border-white/[0.1] shadow-sm space-y-4">
         <div class="flex items-center space-x-3.5">
           <div class="w-14 h-14 rounded-full bg-gradient-to-tr from-accent-coral via-accent-yellow to-accent-lime p-0.5 overflow-hidden shadow-md flex-shrink-0">
-            <img id="profile-user-avatar" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%231F1F2C'/><circle cx='50' cy='38' r='18' fill='%236366F1'/><path d='M24 82 C24 64, 36 58, 50 58 C64 58, 76 64, 76 82 Z' fill='%236366F1'/></svg>" class="w-full h-full object-cover rounded-full bg-zinc-800" alt="Avatar">
+            <img id="profile-user-avatar" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%231F1F2C'/><circle cx='50' cy='38' r='18' fill='%236366F1'/><path d='M24 82 C24 64, 36 58, 50 58 C64 58, 76 64, 76 82 Z' fill='%236366F1'/></svg>" onerror="this.onerror=null;this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><rect width=\'100\' height=\'100\' fill=\'%231F1F2C\'/><circle cx=\'50\' cy=\'38\' r=\'18\' fill=\'%236366F1\'/><path d=\'M24 82 C24 64, 36 58, 50 58 C64 58, 76 64, 76 82 Z\' fill=\'%236366F1\'/></svg>'" class="w-full h-full object-cover rounded-full bg-zinc-800" alt="Avatar">
           </div>
           <div class="flex-1 min-w-0">
             <h3 class="text-base font-black font-display text-zinc-900 dark:text-white truncate" id="profile-user-name">Фрилансер</h3>
@@ -545,7 +547,7 @@
   </main>
 
   <!-- FLOATING ISLAND NAVIGATION DOCK (5 Tabs) -->
-  <div class="fixed bottom-4 inset-x-2 max-w-[360px] mx-auto z-50 pointer-events-none transition-all duration-300" id="island-nav-wrapper">
+  <div class="fixed inset-x-3 max-w-[360px] mx-auto z-50 pointer-events-none transition-all duration-300" id="island-nav-wrapper" style="bottom: calc(max(var(--tg-safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px), 12px) + 4px);">
     <nav class="pointer-events-auto bg-white/95 dark:bg-[#14141E]/95 backdrop-blur-2xl border border-zinc-200/90 dark:border-white/[0.14] rounded-[28px] p-1 shadow-[0_12px_40px_rgba(0,0,0,0.12)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.85)] grid grid-cols-5 gap-1 items-center transition-all duration-300" id="island-nav">
       <!-- 1. Radar / Feed -->
       <button onclick="navigateTo('feed')" id="nav-btn-feed" class="h-[50px] rounded-[22px] bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 font-black shadow-md flex flex-col items-center justify-center transition-all duration-200 active:scale-95 group">
@@ -581,7 +583,7 @@
   </div>
 
   <!-- INTERESTS MODAL DRAWER (Configure Specialties in 1 Tap) -->
-  <div id="interests-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-end justify-center transition-opacity">
+  <div id="interests-modal" onclick="if(event.target === this) toggleInterestsModal()" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-end justify-center transition-opacity">
     <div class="w-full max-w-md bg-white dark:bg-[#171720] border-t border-zinc-200 dark:border-white/10 rounded-t-[32px] p-6 space-y-4 shadow-2xl max-h-[85vh] overflow-y-auto no-scrollbar">
       <div class="flex items-center justify-between">
         <div>
@@ -656,7 +658,7 @@
   </div>
 
   <!-- Notification Toast -->
-  <div id="toast-el" class="fixed top-8 left-1/2 -translate-x-1/2 z-50 bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 font-display font-extrabold px-4 py-2 rounded-full text-xs shadow-2xl opacity-0 pointer-events-none transition-all duration-300">
+  <div id="toast-el" class="fixed left-1/2 -translate-x-1/2 z-50 bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 font-display font-extrabold px-4 py-2 rounded-full text-xs shadow-2xl opacity-0 pointer-events-none transition-all duration-300" style="top: calc(max(var(--tg-content-safe-area-inset-top, 0px), var(--tg-safe-area-inset-top, 0px), env(safe-area-inset-top, 0px), 16px) + 16px);">
     Уведомление
   </div>
 
@@ -666,6 +668,9 @@
     if (tg) {
       tg.ready();
       tg.expand();
+      if (tg.requestFullscreen) {
+        try { tg.requestFullscreen(); } catch (e) {}
+      }
       if (tg.initDataUnsafe?.user) {
         const u = tg.initDataUnsafe.user;
         const displayName = u.first_name ? `${u.first_name}${u.last_name ? ' ' + u.last_name : ''}` : 'Фрилансер';
@@ -684,6 +689,15 @@
     const userId = tg?.initDataUnsafe?.user?.id || 999999999;
     let rawLeads = [];
     let selectedSpecialties = new Set();
+    try {
+      const savedSpecs = localStorage.getItem('leadradar_specialties');
+      if (savedSpecs) {
+        const parsedSpecs = JSON.parse(savedSpecs);
+        if (Array.isArray(parsedSpecs)) {
+          parsedSpecs.forEach(s => selectedSpecialties.add(s));
+        }
+      }
+    } catch (e) {}
     let userReferralUrl = '';
     let isRadarActive = true;
     let currentActiveTab = 'feed';
@@ -755,6 +769,7 @@
       }
 
       localStorage.setItem('leadradar_theme', theme);
+      document.getElementById('meta-theme-color')?.setAttribute('content', isDark ? '#0D0D12' : '#F6F7FB');
 
       if (tg) {
         try {
@@ -818,29 +833,11 @@
       }
     }
 
-    // INTERACTION: FLOATING ISLAND AUTO-HIDE ON SCROLL
-    let lastScrollPosition = 0;
     const islandNavWrapper = document.getElementById('island-nav-wrapper');
-
-    window.addEventListener('scroll', () => {
-      if (document.getElementById('tab-feed').classList.contains('hidden')) {
-        islandNavWrapper.classList.remove('translate-y-24', 'opacity-0');
-        return;
-      }
-
-      const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
-      if (currentScroll > lastScrollPosition && currentScroll > 80) {
-        islandNavWrapper.classList.add('translate-y-24', 'opacity-0');
-      } else {
-        islandNavWrapper.classList.remove('translate-y-24', 'opacity-0');
-      }
-      lastScrollPosition = Math.max(0, currentScroll);
-    }, { passive: true });
 
     // NAVIGATION TABS (5 TABS)
     function navigateTo(tabName) {
       tg?.HapticFeedback?.selectionChanged();
-      islandNavWrapper.classList.remove('translate-y-24', 'opacity-0');
       currentActiveTab = tabName;
 
       ['feed', 'analytics', 'filters', 'premium', 'profile'].forEach(t => {
@@ -1068,12 +1065,37 @@
     }
 
     // LOAD & RENDER LEADS
+    function updateVolumeStats() {
+      if (!rawLeads || rawLeads.length === 0) return;
+      let sum = 0;
+      rawLeads.forEach(lead => {
+        if (!lead.budget) return;
+        const clean = String(lead.budget).replace(/[\s\u00A0]+/g, '');
+        const match = clean.match(/(\d+)/);
+        if (match) {
+          const val = parseInt(match[1], 10);
+          if (!isNaN(val) && val > 0 && val < 5000000) {
+            sum += val;
+          }
+        }
+      });
+      const volEl = document.getElementById('feed-volume-sum');
+      const countEl = document.getElementById('feed-deals-count');
+      if (volEl && sum > 0) {
+        volEl.textContent = `${sum.toLocaleString('ru-RU')} ₽`;
+      }
+      if (countEl) {
+        countEl.textContent = `+${rawLeads.length} сделок`;
+      }
+    }
+
     async function fetchLeads() {
       try {
         const res = await fetch('/api/leads?limit=100');
         const data = await res.json();
         if (data.ok && data.leads) {
           rawLeads = data.leads;
+          updateVolumeStats();
           renderFeed();
         }
       } catch (e) {
@@ -1130,35 +1152,35 @@
           <div onclick="openLead('${safeUrl}')" class="group rounded-[24px] p-4 sm:p-5 bg-white dark:bg-[#171720] border border-zinc-200/80 dark:border-white/[0.06] hover:border-indigo-400/50 dark:hover:border-white/[0.18] shadow-sm hover:shadow-md transition-all active:scale-[0.99] cursor-pointer space-y-3">
             <div class="flex items-center justify-between gap-2">
               <div class="flex items-center space-x-2 min-w-0">
-                <span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full font-display uppercase tracking-wider ${badgeBg}">
+                <span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full font-display uppercase tracking-wider ${badgeBg} shrink-0">
                   ${badgeLabel}
                 </span>
                 <span class="text-[11px] text-zinc-500 dark:text-zinc-400 font-medium truncate">
                   ⚡ Только что
                 </span>
               </div>
-              <span class="text-xs sm:text-sm font-black font-display text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/20 px-3 py-1 rounded-xl shrink-0">
+              <span class="text-xs sm:text-sm font-black font-display text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/20 px-2.5 py-1 rounded-xl shrink-0 max-w-[50%] truncate text-right">
                 💰 ${safeBudget}
               </span>
             </div>
 
             <div>
-              <h4 class="text-sm sm:text-[15px] font-bold font-display text-zinc-900 dark:text-zinc-50 line-clamp-2 leading-snug group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+              <h4 class="text-sm sm:text-[15px] font-bold font-display text-zinc-900 dark:text-zinc-50 line-clamp-2 leading-snug group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors break-words-custom">
                 ${safeTitle}
               </h4>
-              <p class="text-xs sm:text-[13px] text-zinc-600 dark:text-zinc-300 mt-1.5 line-clamp-3 leading-relaxed font-sans">
+              <p class="text-xs sm:text-[13px] text-zinc-600 dark:text-zinc-300 mt-1.5 line-clamp-3 leading-relaxed font-sans break-words-custom">
                 ${safeDesc}
               </p>
             </div>
 
             <div class="pt-2 flex items-center justify-between border-t border-zinc-100 dark:border-white/[0.06]">
-              <span class="text-xs font-semibold text-zinc-600 dark:text-zinc-300 font-sans">
+              <span class="text-xs font-semibold text-zinc-500 dark:text-zinc-400 font-sans">
                 Прямой заказ
               </span>
-              <button onclick="openLead('${safeUrl}')" class="px-3.5 py-1.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 hover:bg-indigo-600 dark:hover:bg-[#98FF3A] flex items-center space-x-1.5 font-bold font-display text-xs active:scale-95 transition-all shadow-sm">
+              <span class="px-3.5 py-1.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 group-hover:bg-indigo-600 dark:group-hover:bg-[#98FF3A] group-hover:text-white dark:group-hover:text-zinc-950 flex items-center space-x-1.5 font-bold font-display text-xs transition-all shadow-sm">
                 <span>Откликнуться</span>
                 <span>↗</span>
-              </button>
+              </span>
             </div>
           </div>
         `;
@@ -1256,7 +1278,7 @@
           if (user.is_premium) {
             if (delayBadge) {
               delayBadge.textContent = '⚡ 0 сек задержка (PREMIUM)';
-              delayBadge.className = 'font-black font-display text-emerald-600 dark:text-emerald-400';
+              delayBadge.className = 'font-black font-display text-emerald-600 dark:text-emerald-400 truncate';
             }
             if (actionBtn) {
               actionBtn.textContent = 'Подписка активна';
@@ -1271,7 +1293,7 @@
             const hours = user.trial_hours_left || 24;
             if (delayBadge) {
               delayBadge.textContent = `⚡ 0 сек задержка (Trial: ${hours}ч)`;
-              delayBadge.className = 'font-black font-display text-amber-600 dark:text-amber-300';
+              delayBadge.className = 'font-black font-display text-amber-600 dark:text-amber-300 truncate';
             }
             if (actionBtn) {
               actionBtn.textContent = 'Закрепить 0 сек ↗';
@@ -1288,7 +1310,7 @@
           } else {
             if (delayBadge) {
               delayBadge.textContent = '⏳ 15 мин задержка (Free)';
-              delayBadge.className = 'font-bold font-display text-zinc-700 dark:text-zinc-300';
+              delayBadge.className = 'font-bold font-display text-zinc-700 dark:text-zinc-300 truncate';
             }
             if (actionBtn) {
               actionBtn.textContent = 'Включить 0 сек ↗';
