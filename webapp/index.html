@@ -116,6 +116,44 @@
       overflow-wrap: break-word;
       word-break: break-word;
     }
+    /* Apple Liquid Glass Navigation Bar */
+    .liquid-glass-dock {
+      background: rgba(255, 255, 255, 0.78);
+      backdrop-filter: blur(28px) saturate(190%);
+      -webkit-backdrop-filter: blur(28px) saturate(190%);
+      border: 1px solid rgba(255, 255, 255, 0.6);
+      box-shadow: 
+        0 16px 40px -8px rgba(0, 0, 0, 0.12),
+        0 4px 12px -2px rgba(0, 0, 0, 0.05),
+        inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.9),
+        inset 0 -1px 1px 0 rgba(0, 0, 0, 0.04);
+    }
+    html.dark .liquid-glass-dock {
+      background: rgba(26, 26, 30, 0.72);
+      backdrop-filter: blur(32px) saturate(200%);
+      -webkit-backdrop-filter: blur(32px) saturate(200%);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      box-shadow: 
+        0 20px 48px -6px rgba(0, 0, 0, 0.8),
+        0 6px 18px -4px rgba(0, 0, 0, 0.5),
+        inset 0 1px 1px 0 rgba(255, 255, 255, 0.25),
+        inset 0 -1px 1px 0 rgba(0, 0, 0, 0.6);
+    }
+    /* Sliding & Draggable Active Pill Indicator */
+    .liquid-glass-pill {
+      background: #18181b;
+      box-shadow: 
+        0 4px 14px -1px rgba(0, 0, 0, 0.22),
+        0 2px 6px -1px rgba(0, 0, 0, 0.12),
+        inset 0 1px 1px 0 rgba(255, 255, 255, 0.18);
+    }
+    html.dark .liquid-glass-pill {
+      background: #ffffff;
+      box-shadow: 
+        0 4px 20px -2px rgba(255, 255, 255, 0.35),
+        0 2px 8px 0 rgba(0, 0, 0, 0.4),
+        inset 0 1px 1px 0 rgba(255, 255, 255, 0.95);
+    }
   </style>
 </head>
 <body class="min-h-screen flex flex-col font-sans text-sm selection:bg-[#007AFF]/30">
@@ -281,7 +319,7 @@
         <div class="rounded-[24px] bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] divide-y divide-black/[0.06] dark:divide-white/[0.06] overflow-hidden shadow-sm">
           <div class="p-3.5 sm:p-4 flex items-center justify-between gap-3">
             <div class="flex items-center space-x-3 min-w-0 flex-1">
-              <span class="text-xl shrink-0">🟦</span>
+              <img src="/static/icons/fl.svg" onerror="this.onerror=null;this.src='https://www.google.com/s2/favicons?domain=fl.ru&sz=128'" alt="FL.ru" class="w-8 h-8 rounded-xl object-contain shrink-0 shadow-sm border border-black/[0.04] dark:border-white/[0.08] p-1 bg-white dark:bg-[#2C2C2E]">
               <div class="min-w-0 flex-1">
                 <h4 class="text-sm font-bold font-display text-zinc-900 dark:text-white truncate">FL.ru</h4>
                 <p class="text-xs text-[#8E8E93] mt-0.5 truncate">Сканирование ленты каждые 60 секунд</p>
@@ -295,7 +333,7 @@
 
           <div class="p-3.5 sm:p-4 flex items-center justify-between gap-3">
             <div class="flex items-center space-x-3 min-w-0 flex-1">
-              <span class="text-xl shrink-0">🟨</span>
+              <img src="/static/icons/freelancehunt.png" onerror="this.onerror=null;this.src='https://www.google.com/s2/favicons?domain=freelancehunt.com&sz=128'" alt="Freelancehunt" class="w-8 h-8 rounded-xl object-contain shrink-0 shadow-sm border border-black/[0.04] dark:border-white/[0.08] p-1 bg-white dark:bg-[#2C2C2E]">
               <div class="min-w-0 flex-1">
                 <h4 class="text-sm font-bold font-display text-zinc-900 dark:text-white truncate">Freelancehunt</h4>
                 <p class="text-xs text-[#8E8E93] mt-0.5 truncate">Сканирование ленты каждые 60 секунд</p>
@@ -309,7 +347,7 @@
 
           <div class="p-3.5 sm:p-4 flex items-center justify-between gap-3 opacity-60">
             <div class="flex items-center space-x-3 min-w-0 flex-1">
-              <span class="text-xl shrink-0">🟩</span>
+              <img src="/static/icons/habr.png" onerror="this.onerror=null;this.src='https://www.google.com/s2/favicons?domain=habr.com&sz=128'" alt="Хабр Фриланс" class="w-8 h-8 rounded-xl object-contain shrink-0 shadow-sm border border-black/[0.04] dark:border-white/[0.08] p-1 bg-white dark:bg-[#2C2C2E]">
               <div class="min-w-0 flex-1">
                 <h4 class="text-sm font-bold font-display text-zinc-900 dark:text-white truncate">Хабр Фриланс</h4>
                 <p class="text-xs text-[#8E8E93] mt-0.5 truncate">Интеграция API в разработке</p>
@@ -323,7 +361,7 @@
 
           <div class="p-3.5 sm:p-4 flex items-center justify-between gap-3 opacity-60">
             <div class="flex items-center space-x-3 min-w-0 flex-1">
-              <span class="text-xl shrink-0">🟧</span>
+              <img src="/static/icons/kwork.png" onerror="this.onerror=null;this.src='https://www.google.com/s2/favicons?domain=kwork.ru&sz=128'" alt="Kwork" class="w-8 h-8 rounded-xl object-contain shrink-0 shadow-sm border border-black/[0.04] dark:border-white/[0.08] p-1 bg-white dark:bg-[#2C2C2E]">
               <div class="min-w-0 flex-1">
                 <h4 class="text-sm font-bold font-display text-zinc-900 dark:text-white truncate">Kwork</h4>
                 <p class="text-xs text-[#8E8E93] mt-0.5 truncate">Интеграция биржи в разработке</p>
@@ -719,36 +757,40 @@
 
   </main>
 
-  <!-- FLOATING ISLAND NAVIGATION DOCK (Apple visionOS / iOS 18 Tab Bar Style) -->
+  <!-- FLOATING ISLAND NAVIGATION DOCK (Apple Liquid Glass & Draggable Sliding Pill) -->
   <div class="fixed inset-x-3 max-w-[360px] mx-auto z-50 pointer-events-none transition-all duration-300" id="island-nav-wrapper" style="bottom: calc(max(var(--tg-safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px), 12px) + 4px);">
-    <nav class="pointer-events-auto bg-white/85 dark:bg-[#1C1C1E]/85 backdrop-blur-2xl border border-black/[0.08] dark:border-white/[0.12] rounded-[30px] p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.9)] grid grid-cols-5 gap-1 items-center transition-all duration-300" id="island-nav">
+    <nav class="pointer-events-auto relative liquid-glass-dock rounded-[30px] p-1.5 grid grid-cols-5 gap-1 items-center transition-all duration-300 touch-none select-none overflow-hidden" id="island-nav">
+      
+      <!-- Sliding & Draggable Active Pill Indicator -->
+      <div id="nav-active-pill" class="absolute top-1.5 bottom-1.5 rounded-[22px] liquid-glass-pill z-0 pointer-events-auto cursor-grab active:cursor-grabbing will-change-transform" style="left: 0; width: 66px; transform: translateX(6px);"></div>
+
       <!-- 1. Radar / Feed -->
-      <button onclick="navigateTo('feed')" id="nav-btn-feed" class="h-[50px] rounded-[22px] bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 font-black shadow-md flex flex-col items-center justify-center transition-all duration-200 active:scale-95 group">
+      <button onclick="navigateTo('feed')" id="nav-btn-feed" data-tab="feed" class="relative z-10 h-[50px] rounded-[22px] bg-transparent text-white dark:text-zinc-950 font-black flex flex-col items-center justify-center transition-colors duration-200 select-none cursor-pointer group">
         <svg class="w-4 h-4 transition-transform group-hover:scale-105" fill="none" stroke="currentColor" stroke-width="2.4" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
         <span class="text-[9px] font-display tracking-tight mt-0.5">Радар</span>
       </button>
 
       <!-- 2. Analytics -->
-      <button onclick="navigateTo('analytics')" id="nav-btn-analytics" class="h-[50px] rounded-[22px] text-[#8E8E93] hover:text-zinc-900 dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.04] font-medium flex flex-col items-center justify-center transition-all duration-200 active:scale-95 group">
+      <button onclick="navigateTo('analytics')" id="nav-btn-analytics" data-tab="analytics" class="relative z-10 h-[50px] rounded-[22px] bg-transparent text-[#8E8E93] hover:text-zinc-900 dark:hover:text-white font-medium flex flex-col items-center justify-center transition-colors duration-200 select-none cursor-pointer group">
         <svg class="w-4 h-4 transition-transform group-hover:scale-105" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
         <span class="text-[9px] font-display tracking-tight mt-0.5">Рынок</span>
       </button>
 
       <!-- 3. Filters -->
-      <button onclick="navigateTo('filters')" id="nav-btn-filters" class="h-[50px] rounded-[22px] text-[#8E8E93] hover:text-zinc-900 dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.04] font-medium flex flex-col items-center justify-center transition-all duration-200 active:scale-95 relative group">
-        <div id="nav-filter-dot" class="hidden absolute top-1.5 right-3 w-1.5 h-1.5 rounded-full bg-[#34C759] ring-2 ring-white dark:ring-[#1C1C1E]"></div>
+      <button onclick="navigateTo('filters')" id="nav-btn-filters" data-tab="filters" class="relative z-10 h-[50px] rounded-[22px] bg-transparent text-[#8E8E93] hover:text-zinc-900 dark:hover:text-white font-medium flex flex-col items-center justify-center transition-colors duration-200 select-none cursor-pointer relative group">
+        <div id="nav-filter-dot" class="hidden absolute top-1.5 right-3 w-1.5 h-1.5 rounded-full bg-[#34C759] ring-2 ring-white dark:ring-[#1C1C1E] z-20"></div>
         <svg class="w-4 h-4 transition-transform group-hover:scale-105" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
         <span class="text-[9px] font-display tracking-tight mt-0.5">Фильтры</span>
       </button>
 
       <!-- 4. Premium -->
-      <button onclick="navigateTo('premium')" id="nav-btn-premium" class="h-[50px] rounded-[22px] text-[#8E8E93] hover:text-zinc-900 dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.04] font-medium flex flex-col items-center justify-center transition-all duration-200 active:scale-95 group">
+      <button onclick="navigateTo('premium')" id="nav-btn-premium" data-tab="premium" class="relative z-10 h-[50px] rounded-[22px] bg-transparent text-[#8E8E93] hover:text-zinc-900 dark:hover:text-white font-medium flex flex-col items-center justify-center transition-colors duration-200 select-none cursor-pointer group">
         <svg class="w-4 h-4 transition-transform group-hover:scale-105" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
         <span class="text-[9px] font-display tracking-tight mt-0.5">Тариф</span>
       </button>
 
       <!-- 5. Profile -->
-      <button onclick="navigateTo('profile')" id="nav-btn-profile" class="h-[50px] rounded-[22px] text-[#8E8E93] hover:text-zinc-900 dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.04] font-medium flex flex-col items-center justify-center transition-all duration-200 active:scale-95 group">
+      <button onclick="navigateTo('profile')" id="nav-btn-profile" data-tab="profile" class="relative z-10 h-[50px] rounded-[22px] bg-transparent text-[#8E8E93] hover:text-zinc-900 dark:hover:text-white font-medium flex flex-col items-center justify-center transition-colors duration-200 select-none cursor-pointer group">
         <svg class="w-4 h-4 transition-transform group-hover:scale-105" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
         <span class="text-[9px] font-display tracking-tight mt-0.5">Профиль</span>
       </button>
@@ -1034,11 +1076,31 @@
     }
 
     // NAVIGATION TABS (5 TABS)
+    const NAV_TABS = ['feed', 'analytics', 'filters', 'premium', 'profile'];
+
+    function positionPill(tabName, animate = true) {
+      const pill = document.getElementById('nav-active-pill');
+      const btn = document.getElementById(`nav-btn-${tabName}`);
+      if (!pill || !btn) return;
+
+      if (animate) {
+        pill.style.transition = 'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), width 0.35s cubic-bezier(0.16, 1, 0.3, 1)';
+      } else {
+        pill.style.transition = 'none';
+      }
+
+      const targetX = btn.offsetLeft;
+      const targetW = btn.offsetWidth;
+
+      pill.style.transform = `translateX(${targetX}px)`;
+      pill.style.width = `${targetW}px`;
+    }
+
     function navigateTo(tabName) {
       tg?.HapticFeedback?.selectionChanged();
       currentActiveTab = tabName;
 
-      ['feed', 'analytics', 'filters', 'premium', 'profile'].forEach(t => {
+      NAV_TABS.forEach(t => {
         const sec = document.getElementById(`tab-${t}`);
         if (sec) sec.classList.toggle('hidden', t !== tabName);
       });
@@ -1054,19 +1116,177 @@
     }
 
     function updateNavUI(activeTab) {
-      ['feed', 'analytics', 'filters', 'premium', 'profile'].forEach(t => {
+      positionPill(activeTab, true);
+      NAV_TABS.forEach(t => {
         const btn = document.getElementById(`nav-btn-${t}`);
         if (!btn) return;
         const svg = btn.querySelector('svg');
 
         if (t === activeTab) {
-          btn.className = 'h-[50px] rounded-[22px] bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 font-black shadow-md flex flex-col items-center justify-center transition-all duration-200 active:scale-95 group';
+          btn.className = 'relative z-10 h-[50px] rounded-[22px] bg-transparent text-white dark:text-zinc-950 font-black flex flex-col items-center justify-center transition-colors duration-200 select-none cursor-pointer group';
           if (svg) svg.setAttribute('stroke-width', '2.4');
         } else {
-          btn.className = 'h-[50px] rounded-[22px] text-[#8E8E93] hover:text-zinc-900 dark:hover:text-white hover:bg-black/[0.04] dark:hover:bg-white/[0.04] font-medium flex flex-col items-center justify-center transition-all duration-200 active:scale-95 relative group';
+          btn.className = 'relative z-10 h-[50px] rounded-[22px] bg-transparent text-[#8E8E93] hover:text-zinc-900 dark:hover:text-white font-medium flex flex-col items-center justify-center transition-colors duration-200 select-none cursor-pointer group';
           if (svg) svg.setAttribute('stroke-width', '2');
         }
       });
+    }
+
+    let isNavDragging = false;
+    let dragStartX = 0;
+    let dragInitialTranslateX = 0;
+    let dragHoveredTab = null;
+    let dragMoved = false;
+
+    function initNavDrag() {
+      const dock = document.getElementById('island-nav');
+      const pill = document.getElementById('nav-active-pill');
+      if (!dock || !pill) return;
+
+      setTimeout(() => {
+        positionPill(currentActiveTab, false);
+      }, 50);
+
+      function getPillTranslateX() {
+        const style = window.getComputedStyle(pill);
+        const transform = style.transform || style.webkitTransform;
+        if (transform && transform !== 'none') {
+          const matrix = transform.match(/matrix.*\((.+)\)/);
+          if (matrix) {
+            const values = matrix[1].split(', ');
+            return parseFloat(values[4]) || 0;
+          }
+        }
+        return pill.offsetLeft || 0;
+      }
+
+      function onDragStart(clientX) {
+        dragStartX = clientX;
+        dragInitialTranslateX = getPillTranslateX();
+        dragHoveredTab = currentActiveTab;
+        dragMoved = false;
+        isNavDragging = false;
+      }
+
+      function onDragMove(clientX, e) {
+        const deltaX = clientX - dragStartX;
+        if (!isNavDragging && Math.abs(deltaX) > 5) {
+          isNavDragging = true;
+          dragMoved = true;
+          pill.style.transition = 'none';
+          pill.style.opacity = '0.92';
+        }
+
+        if (isNavDragging) {
+          if (e && e.cancelable) e.preventDefault();
+
+          const firstBtn = document.getElementById('nav-btn-feed');
+          const lastBtn = document.getElementById('nav-btn-profile');
+          const minX = firstBtn ? firstBtn.offsetLeft : 6;
+          const maxX = lastBtn ? lastBtn.offsetLeft : (dock.offsetWidth - pill.offsetWidth - 6);
+
+          let newX = dragInitialTranslateX + deltaX;
+          if (newX < minX) newX = minX - (minX - newX) * 0.25;
+          if (newX > maxX) newX = maxX + (newX - maxX) * 0.25;
+
+          pill.style.transform = `translateX(${newX}px) scale(0.97)`;
+
+          const pillCenter = newX + (pill.offsetWidth / 2);
+          let closest = currentActiveTab;
+          let minDiff = Infinity;
+
+          NAV_TABS.forEach(t => {
+            const b = document.getElementById(`nav-btn-${t}`);
+            if (!b) return;
+            const bCenter = b.offsetLeft + (b.offsetWidth / 2);
+            const diff = Math.abs(pillCenter - bCenter);
+            if (diff < minDiff) {
+              minDiff = diff;
+              closest = t;
+            }
+          });
+
+          if (closest !== dragHoveredTab) {
+            dragHoveredTab = closest;
+            tg?.HapticFeedback?.selectionChanged();
+            NAV_TABS.forEach(t => {
+              const btn = document.getElementById(`nav-btn-${t}`);
+              if (!btn) return;
+              if (t === closest) {
+                btn.className = 'relative z-10 h-[50px] rounded-[22px] bg-transparent text-white dark:text-zinc-950 font-black flex flex-col items-center justify-center transition-colors duration-150 select-none cursor-pointer group';
+              } else {
+                btn.className = 'relative z-10 h-[50px] rounded-[22px] bg-transparent text-[#8E8E93] hover:text-zinc-900 dark:hover:text-white font-medium flex flex-col items-center justify-center transition-colors duration-150 select-none cursor-pointer group';
+              }
+            });
+          }
+        }
+      }
+
+      function onDragEnd() {
+        if (!isNavDragging) {
+          isNavDragging = false;
+          return;
+        }
+        isNavDragging = false;
+        pill.style.opacity = '';
+
+        if (dragHoveredTab && dragHoveredTab !== currentActiveTab) {
+          navigateTo(dragHoveredTab);
+        } else {
+          positionPill(currentActiveTab, true);
+          updateNavUI(currentActiveTab);
+        }
+      }
+
+      let isPointerActive = false;
+      dock.addEventListener('pointerdown', (e) => {
+        isPointerActive = true;
+        onDragStart(e.clientX);
+      });
+
+      window.addEventListener('pointermove', (e) => {
+        if (!isPointerActive) return;
+        onDragMove(e.clientX, e);
+      }, { passive: false });
+
+      window.addEventListener('pointerup', () => {
+        if (!isPointerActive) return;
+        isPointerActive = false;
+        onDragEnd();
+      });
+
+      window.addEventListener('pointercancel', () => {
+        if (!isPointerActive) return;
+        isPointerActive = false;
+        onDragEnd();
+      });
+
+      dock.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+          onDragStart(e.touches[0].clientX);
+        }
+      }, { passive: true });
+
+      dock.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 1) {
+          onDragMove(e.touches[0].clientX, e);
+        }
+      }, { passive: false });
+
+      dock.addEventListener('touchend', () => {
+        onDragEnd();
+      }, { passive: true });
+
+      dock.addEventListener('click', (e) => {
+        if (dragMoved) {
+          e.preventDefault();
+          e.stopPropagation();
+          dragMoved = false;
+        }
+      }, true);
+
+      window.addEventListener('resize', () => positionPill(currentActiveTab, false));
+      window.addEventListener('orientationchange', () => setTimeout(() => positionPill(currentActiveTab, false), 150));
     }
 
     // RADAR ON/OFF TOGGLE
@@ -1733,6 +1953,7 @@
     fetchLeads();
     loadUserData();
     loadAchievements();
+    initNavDrag();
   </script>
 </body>
 </html>

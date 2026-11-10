@@ -210,6 +210,9 @@ def create_webapp(bot: Bot) -> web.Application:
     app.on_response_prepare.append(add_cors_headers)
 
     app.router.add_get("/", handle_index)
+    static_dir = WEBAPP_DIR / "static"
+    static_dir.mkdir(parents=True, exist_ok=True)
+    app.router.add_static("/static", static_dir)
     app.router.add_get("/api/leads", get_leads_api)
     app.router.add_get("/api/user/{id}", get_user_api)
     app.router.add_post("/api/user/{id}/toggle_active", toggle_active_api)
