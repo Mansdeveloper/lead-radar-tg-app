@@ -759,10 +759,10 @@
 
   <!-- FLOATING ISLAND NAVIGATION DOCK (Apple Liquid Glass & Draggable Sliding Pill) -->
   <div class="fixed inset-x-3 max-w-[360px] mx-auto z-50 pointer-events-none transition-all duration-300" id="island-nav-wrapper" style="bottom: calc(max(var(--tg-safe-area-inset-bottom, 0px), env(safe-area-inset-bottom, 0px), 12px) + 4px);">
-    <nav class="pointer-events-auto relative liquid-glass-dock rounded-[30px] p-1.5 grid grid-cols-5 gap-1 items-center transition-all duration-300 touch-none select-none overflow-hidden" id="island-nav">
+    <nav class="pointer-events-auto relative liquid-glass-dock rounded-[30px] p-1.5 grid grid-cols-5 gap-1 items-center transition-all duration-300 select-none overflow-hidden" id="island-nav">
       
       <!-- Sliding & Draggable Active Pill Indicator -->
-      <div id="nav-active-pill" class="absolute top-1.5 bottom-1.5 rounded-[22px] liquid-glass-pill z-0 pointer-events-auto cursor-grab active:cursor-grabbing will-change-transform" style="left: 0; width: 66px; transform: translateX(6px);"></div>
+      <div id="nav-active-pill" class="absolute top-1.5 bottom-1.5 rounded-[22px] liquid-glass-pill z-0 pointer-events-auto cursor-grab active:cursor-grabbing will-change-transform touch-none" style="left: 0; width: 66px; transform: translateX(6px);"></div>
 
       <!-- 1. Radar / Feed -->
       <button onclick="navigateTo('feed')" id="nav-btn-feed" data-tab="feed" class="relative z-10 h-[50px] rounded-[22px] bg-transparent text-white dark:text-zinc-950 font-black flex flex-col items-center justify-center transition-colors duration-200 select-none cursor-pointer group">
@@ -919,6 +919,7 @@
     let userReferralUrl = '';
     let isRadarActive = true;
     let currentActiveTab = 'feed';
+    const NAV_TABS = ['feed', 'analytics', 'filters', 'premium', 'profile'];
 
     // 12 SPECIALTY CATEGORIES DICTIONARY
     const SPECIALTY_KEYWORDS = {
@@ -1040,9 +1041,15 @@
         }
       }
 
-      updateNavUI(currentActiveTab);
-      syncSpecialtyUI();
-      updateRadarUI();
+      if (typeof updateNavUI === 'function') {
+        try { updateNavUI(currentActiveTab); } catch (e) {}
+      }
+      if (typeof syncSpecialtyUI === 'function') {
+        try { syncSpecialtyUI(); } catch (e) {}
+      }
+      if (typeof updateRadarUI === 'function') {
+        try { updateRadarUI(); } catch (e) {}
+      }
     }
 
     // Initialize Theme immediately
@@ -1076,8 +1083,6 @@
     }
 
     // NAVIGATION TABS (5 TABS)
-    const NAV_TABS = ['feed', 'analytics', 'filters', 'premium', 'profile'];
-
     function positionPill(tabName, animate = true) {
       const pill = document.getElementById('nav-active-pill');
       const btn = document.getElementById(`nav-btn-${tabName}`);
@@ -1136,16 +1141,17 @@
     let dragStartX = 0;
     let dragInitialTranslateX = 0;
     let dragHoveredTab = null;
-    let dragMoved = false;
+    let justFinishedDrag = false;
 
     function initNavDrag() {
       const dock = document.getElementById('island-nav');
       const pill = document.getElementById('nav-active-pill');
       if (!dock || !pill) return;
 
-      setTimeout(() => {
-        positionPill(currentActiveTab, false);
-      }, 50);
+      const alignPill = () => positionPill(currentActiveTab, false);
+      alignPill();
+      setTimeout(alignPill, 60);
+      setTimeout(alignPill, 300);
 
       function getPillTranslateX() {
         const style = window.getComputedStyle(pill);
@@ -1153,7 +1159,7 @@
         if (transform && transform !== 'none') {
           const matrix = transform.match(/matrix.*\((.+)\)/);
           if (matrix) {
-            const values = matrix[1].split(', ');
+            const values = matrix[1].split(',');
             return parseFloat(values[4]) || 0;
           }
         }
@@ -1164,15 +1170,13 @@
         dragStartX = clientX;
         dragInitialTranslateX = getPillTranslateX();
         dragHoveredTab = currentActiveTab;
-        dragMoved = false;
         isNavDragging = false;
       }
 
       function onDragMove(clientX, e) {
         const deltaX = clientX - dragStartX;
-        if (!isNavDragging && Math.abs(deltaX) > 5) {
+        if (!isNavDragging && Math.abs(deltaX) > 12) {
           isNavDragging = true;
-          dragMoved = true;
           pill.style.transition = 'none';
           pill.style.opacity = '0.92';
         }
@@ -1223,70 +1227,62 @@
       }
 
       function onDragEnd() {
-        if (!isNavDragging) {
-          isNavDragging = false;
-          return;
-        }
-        isNavDragging = false;
         pill.style.opacity = '';
+        if (isNavDragging) {
+          isNavDragging = false;
+          justFinishedDrag = true;
+          setTimeout(() => { justFinishedDrag = false; }, 120);
 
-        if (dragHoveredTab && dragHoveredTab !== currentActiveTab) {
-          navigateTo(dragHoveredTab);
-        } else {
-          positionPill(currentActiveTab, true);
-          updateNavUI(currentActiveTab);
+          if (dragHoveredTab && dragHoveredTab !== currentActiveTab) {
+            navigateTo(dragHoveredTab);
+          } else {
+            positionPill(currentActiveTab, true);
+            updateNavUI(currentActiveTab);
+          }
         }
       }
 
-      let isPointerActive = false;
+      // Pointer events for desktop & touch
       dock.addEventListener('pointerdown', (e) => {
-        isPointerActive = true;
+        if (e.button !== undefined && e.button !== 0) return;
         onDragStart(e.clientX);
+
+        const onPointerMove = (ev) => onDragMove(ev.clientX, ev);
+        const onPointerUp = () => {
+          window.removeEventListener('pointermove', onPointerMove);
+          window.removeEventListener('pointerup', onPointerUp);
+          window.removeEventListener('pointercancel', onPointerUp);
+          onDragEnd();
+        };
+
+        window.addEventListener('pointermove', onPointerMove, { passive: false });
+        window.addEventListener('pointerup', onPointerUp);
+        window.addEventListener('pointercancel', onPointerUp);
       });
 
-      window.addEventListener('pointermove', (e) => {
-        if (!isPointerActive) return;
-        onDragMove(e.clientX, e);
-      }, { passive: false });
-
-      window.addEventListener('pointerup', () => {
-        if (!isPointerActive) return;
-        isPointerActive = false;
-        onDragEnd();
-      });
-
-      window.addEventListener('pointercancel', () => {
-        if (!isPointerActive) return;
-        isPointerActive = false;
-        onDragEnd();
-      });
-
+      // Touch events fallback for webview compatibility
       dock.addEventListener('touchstart', (e) => {
-        if (e.touches.length === 1) {
-          onDragStart(e.touches[0].clientX);
-        }
+        if (e.touches.length === 1) onDragStart(e.touches[0].clientX);
       }, { passive: true });
 
       dock.addEventListener('touchmove', (e) => {
-        if (e.touches.length === 1) {
-          onDragMove(e.touches[0].clientX, e);
-        }
+        if (e.touches.length === 1) onDragMove(e.touches[0].clientX, e);
       }, { passive: false });
 
-      dock.addEventListener('touchend', () => {
-        onDragEnd();
-      }, { passive: true });
+      dock.addEventListener('touchend', onDragEnd, { passive: true });
+      dock.addEventListener('touchcancel', onDragEnd, { passive: true });
 
+      // Only suppress click if a REAL drag happened
       dock.addEventListener('click', (e) => {
-        if (dragMoved) {
+        if (justFinishedDrag) {
           e.preventDefault();
           e.stopPropagation();
-          dragMoved = false;
+          justFinishedDrag = false;
         }
       }, true);
 
-      window.addEventListener('resize', () => positionPill(currentActiveTab, false));
-      window.addEventListener('orientationchange', () => setTimeout(() => positionPill(currentActiveTab, false), 150));
+      window.addEventListener('resize', alignPill);
+      window.addEventListener('orientationchange', () => setTimeout(alignPill, 150));
     }
 
     // RADAR ON/OFF TOGGLE
@@ -1698,7 +1694,7 @@
       } catch (e) {
         console.error(e);
         const listEl = document.getElementById('achievements-list-container');
-        if (listEl && !listEl.children.length) {
+        if (listEl && (!listEl.children || !listEl.children.length)) {
           listEl.innerHTML = '<div class="py-3 text-center text-xs text-[#8E8E93]">Не удалось загрузить достижения</div>';
         }
       }
