@@ -8,7 +8,10 @@ from database.session import async_session
 
 
 async def get_or_create_user(
-    telegram_id: int, username: str | None = None, referred_by: int | None = None
+    telegram_id: int,
+    username: str | None = None,
+    referred_by: int | None = None,
+    utm_source: str | None = None,
 ) -> tuple[User, bool]:
     async with async_session() as session:
         result = await session.execute(select(User).where(User.telegram_id == telegram_id))
@@ -25,6 +28,7 @@ async def get_or_create_user(
                 trial_until=now + timedelta(hours=bonus_hours),
                 trial_expired_notified=False,
                 is_active=True,
+                utm_source=utm_source,
             )
             session.add(user)
             await session.commit()
@@ -264,6 +268,18 @@ async def save_lead(
         return True
 
 
+async def get_lead_by_id(lead_id: int) -> Lead | None:
+    async with async_session() as session:
+        result = await session.execute(select(Lead).where(Lead.id == lead_id))
+        return result.scalar_one_or_none()
+
+
+async def get_lead_by_external_id(external_id: str) -> Lead | None:
+    async with async_session() as session:
+        result = await session.execute(select(Lead).where(Lead.external_id == external_id))
+        return result.scalar_one_or_none()
+
+
 async def get_all_subscribers_with_filters() -> list[tuple[User, UserFilter]]:
     async with async_session() as session:
         query = (
@@ -276,10 +292,15 @@ async def get_all_subscribers_with_filters() -> list[tuple[User, UserFilter]]:
 
 
 async def get_recent_leads(
-    limit: int = 50, category: str | None = None, search: str | None = None
+    limit: int = 50,
+    category: str | None = None,
+    search: str | None = None,
+    include_test: bool = False,
 ) -> list[Lead]:
     async with async_session() as session:
         query = select(Lead).order_by(Lead.published_at.desc()).limit(limit)
+        if not include_test:
+            query = query.where(~Lead.external_id.like("test_%"))
         if category and category != "all":
             query = query.where(Lead.category == category)
         if search and search.strip():
@@ -490,4 +511,47 @@ async def get_leads_count_last_hours(hours: int = 48, keywords: str | None = Non
             1 for lead in leads
             if any(kw in f"{lead.title} {lead.description}".lower() for kw in kw_list)
         )
+
+
+async def get_utm_analytics() -> list[dict]:
+    """
+    Returns aggregated metrics by UTM source:
+    - utm_source: source string or 'organic'
+    - total_users: total registered users
+    - active_users: users with is_active == True
+    - premium_users: users with active paid premium
+    - trial_users: users with active trial
+    - premium_or_trial: users with either active premium or active trial
+    """
+    async with async_session() as session:
+        result = await session.execute(select(User))
+        users = list(result.scalars().all())
+
+    stats_map: dict[str, dict] = {}
+    for u in users:
+        source = u.utm_source.strip() if u.utm_source and u.utm_source.strip() else "organic"
+        if source not in stats_map:
+            stats_map[source] = {
+                "utm_source": source,
+                "total_users": 0,
+                "active_users": 0,
+                "premium_users": 0,
+                "trial_users": 0,
+                "premium_or_trial": 0,
+            }
+        stats = stats_map[source]
+        stats["total_users"] += 1
+
+        user_status = compute_user_status(u)
+        if user_status["is_active"]:
+            stats["active_users"] += 1
+        if user_status["is_premium"]:
+            stats["premium_users"] += 1
+        if user_status["is_trial"]:
+            stats["trial_users"] += 1
+        if user_status["is_premium"] or user_status["is_trial"]:
+            stats["premium_or_trial"] += 1
+
+    return sorted(stats_map.values(), key=lambda x: x["total_users"], reverse=True)
+
 

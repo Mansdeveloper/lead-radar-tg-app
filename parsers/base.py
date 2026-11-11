@@ -14,6 +14,7 @@ class RawLead:
     category: str
     published_at: datetime
     raw_text: str
+    id: int | None = None
 
 
 class BaseParser(ABC):

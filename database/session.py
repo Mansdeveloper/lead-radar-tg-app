@@ -1,10 +1,20 @@
-from sqlalchemy import inspect, text
+from sqlalchemy import event, inspect, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from config import settings
 from database.models import Base
 
 engine = create_async_engine(settings.DATABASE_URL, echo=False)
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+
+
+@event.listens_for(engine.sync_engine, "connect")
+def _set_sqlite_pragma(dbapi_connection, connection_record):
+    if "sqlite" in settings.DATABASE_URL:
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA busy_timeout=30000")
+        cursor.execute("PRAGMA synchronous=NORMAL")
+        cursor.close()
 
 
 def _migrate_db(connection):
@@ -27,6 +37,8 @@ def _migrate_db(connection):
             connection.execute(text("ALTER TABLE users ADD COLUMN consecutive_active_days INTEGER DEFAULT 0"))
         if "last_active_date" not in cols:
             connection.execute(text("ALTER TABLE users ADD COLUMN last_active_date VARCHAR(10)"))
+        if "utm_source" not in cols:
+            connection.execute(text("ALTER TABLE users ADD COLUMN utm_source VARCHAR(128)"))
 
         connection.execute(text("UPDATE users SET total_leads_clicked = 0 WHERE total_leads_clicked IS NULL"))
         connection.execute(text("UPDATE users SET consecutive_active_days = 0 WHERE consecutive_active_days IS NULL"))

@@ -57,10 +57,13 @@ async def show_profile(event: Message | CallbackQuery):
         inline_keyboard=[
             [InlineKeyboardButton(text="📢 Поделиться ссылкой", url=share_url)],
             [
+                InlineKeyboardButton(text="🧪 Тестовый лид", callback_data="test_lead"),
                 InlineKeyboardButton(text=toggle_text, callback_data="toggle_leads"),
-                InlineKeyboardButton(text="💎 Premium", callback_data="buy_premium"),
             ],
-            [InlineKeyboardButton(text="🔙 В главное меню", callback_data="back_to_menu")],
+            [
+                InlineKeyboardButton(text="💎 Premium", callback_data="buy_premium"),
+                InlineKeyboardButton(text="🔙 В главное меню", callback_data="back_to_menu"),
+            ],
         ]
     )
 

@@ -3,7 +3,7 @@ import logging
 from aiogram import Bot
 
 from config import settings
-from database.crud import save_lead
+from database.crud import get_lead_by_external_id, save_lead
 from parsers.fl import FLRuParser
 from parsers.freelancehunt import FreelancehuntParser
 from services.matcher import dispatch_lead
@@ -42,6 +42,9 @@ class IngestionManager:
                         )
                         if inserted:
                             new_count += 1
+                            record = await get_lead_by_external_id(lead.external_id)
+                            if record:
+                                lead.id = record.id
                             # Dispatch to interested users
                             await dispatch_lead(self.bot, lead)
 

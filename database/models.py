@@ -27,6 +27,7 @@ class User(Base):
     total_leads_clicked: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     consecutive_active_days: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     last_active_date: Mapped[str | None] = mapped_column(String(10), nullable=True)  # YYYY-MM-DD
+    utm_source: Mapped[str | None] = mapped_column(String(128), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, default=lambda: datetime.now(timezone.utc)
     )

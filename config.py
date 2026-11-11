@@ -25,6 +25,24 @@ class Settings(BaseSettings):
     WEBAPP_PORT: int = int(os.environ.get("PORT", 8080))
     WEBAPP_URL: str = os.environ.get("WEBAPP_URL", "")  # Configured by Railway / public domain
 
+    # Admin settings
+    ADMIN_IDS: str = ""
+
+    def get_admin_ids(self) -> set[int]:
+        ids = set()
+        if self.ADMIN_IDS:
+            for part in str(self.ADMIN_IDS).split(","):
+                part = part.strip()
+                if part.isdigit():
+                    ids.add(int(part))
+        return ids
+
+    def is_admin(self, user_id: int) -> bool:
+        admin_ids = self.get_admin_ids()
+        if not admin_ids:
+            return True
+        return user_id in admin_ids
+
     model_config = SettingsConfigDict(
         env_file=str(Path(__file__).parent / ".env"),
         env_file_encoding="utf-8",

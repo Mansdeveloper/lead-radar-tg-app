@@ -7,16 +7,19 @@ from aiogram.types import LabeledPrice
 
 from config import settings
 from database.crud import (
+    get_lead_by_id,
     get_or_create_user,
     get_recent_leads,
     get_user,
     get_user_filters,
     get_user_status,
+    get_utm_analytics,
     record_lead_click,
     toggle_user_active,
     update_user_full_filters,
 )
 from services.achievements import check_and_grant_achievements, get_achievements_payload
+from services.pitcher import generate_pitch
 
 logger = logging.getLogger("WebAppServer")
 WEBAPP_DIR = Path(__file__).parent
@@ -201,6 +204,47 @@ def create_webapp(bot: Bot) -> web.Application:
         )
         return web.json_response({"ok": True, "invoice_link": link})
 
+    async def get_lead_pitch_api(request: web.Request) -> web.Response:
+        lead_id_str = request.match_info.get("id")
+        try:
+            lead_id = int(lead_id_str)
+        except (ValueError, TypeError):
+            return web.json_response({"ok": False, "error": "Invalid lead ID"}, status=400)
+
+        lead = await get_lead_by_id(lead_id)
+        if not lead:
+            return web.json_response({"ok": False, "error": "Lead not found"}, status=404)
+
+        pitch = generate_pitch(
+            title=lead.title,
+            description=lead.description,
+            budget=lead.budget,
+            category=lead.category,
+        )
+        return web.json_response({"ok": True, "lead_id": lead.id, "pitch": pitch})
+
+    async def get_admin_utm_stats_api(request: web.Request) -> web.Response:
+        stats = await get_utm_analytics()
+        total_users = sum(s["total_users"] for s in stats)
+        total_active = sum(s["active_users"] for s in stats)
+        total_premium = sum(s["premium_users"] for s in stats)
+        total_trial = sum(s["trial_users"] for s in stats)
+        total_premium_or_trial = sum(s["premium_or_trial"] for s in stats)
+
+        return web.json_response(
+            {
+                "ok": True,
+                "summary": {
+                    "total_users": total_users,
+                    "total_active": total_active,
+                    "total_premium": total_premium,
+                    "total_trial": total_trial,
+                    "total_premium_or_trial": total_premium_or_trial,
+                },
+                "sources": stats,
+            }
+        )
+
     # CORS & Routes
     async def add_cors_headers(request: web.Request, response: web.StreamResponse):
         response.headers["Access-Control-Allow-Origin"] = "*"
@@ -214,6 +258,8 @@ def create_webapp(bot: Bot) -> web.Application:
     static_dir.mkdir(parents=True, exist_ok=True)
     app.router.add_static("/static", static_dir)
     app.router.add_get("/api/leads", get_leads_api)
+    app.router.add_get("/api/lead/{id}/pitch", get_lead_pitch_api)
+    app.router.add_get("/api/admin/utm_stats", get_admin_utm_stats_api)
     app.router.add_get("/api/user/{id}", get_user_api)
     app.router.add_post("/api/user/{id}/toggle_active", toggle_active_api)
     app.router.add_get("/api/user/{id}/achievements", get_achievements_api)

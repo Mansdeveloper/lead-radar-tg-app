@@ -6,6 +6,7 @@ import aiohttp
 import feedparser
 
 from parsers.base import BaseParser, RawLead
+from services.classifier import detect_lead_category
 
 
 class FreelancehuntParser(BaseParser):
@@ -19,10 +20,13 @@ class FreelancehuntParser(BaseParser):
 
     def _extract_budget(self, title: str, description: str) -> str:
         # Freelancehunt usually puts budget in title or description like "50USD" or "10 000 UAH / RUB"
-        match = re.search(r"(\d[\d\s]*\s*(?:USD|\$|EUR|€|грн|руб|₽))", title, re.IGNORECASE)
+        clean_title = html.unescape(title)
+        clean_desc = html.unescape(description)
+        pattern = r"((?:[$€₽₴]\s*\d[\d\s]*)|(?:\d[\d\s]*\s*(?:USD|\$|EUR|€|грн|UAH|руб|₽|RUB|₴)))"
+        match = re.search(pattern, clean_title, re.IGNORECASE)
         if match:
             return match.group(1).strip()
-        match_desc = re.search(r"(\d[\d\s]*\s*(?:USD|\$|EUR|€|грн|руб|₽))", description, re.IGNORECASE)
+        match_desc = re.search(pattern, clean_desc, re.IGNORECASE)
         if match_desc:
             return match_desc.group(1).strip()
         return "По договоренности"
@@ -41,8 +45,8 @@ class FreelancehuntParser(BaseParser):
 
             feed = feedparser.parse(content)
             for entry in feed.entries:
-                link = entry.get("link", "")
-                title = entry.get("title", "")
+                link = entry.get("link", "").strip()
+                title = html.unescape(entry.get("title", "")).strip()
                 raw_desc = entry.get("description", "")
                 desc = self._clean_html(raw_desc)[:400]
                 guid = entry.get("id") or entry.get("guid") or link
@@ -54,8 +58,9 @@ class FreelancehuntParser(BaseParser):
                     except Exception:
                         pass
 
-                budget = self._extract_budget(title, raw_desc)
+                budget = self._extract_budget(title, desc)
                 raw_text = f"{title} {desc}".lower()
+                category = detect_lead_category(title, desc)
 
                 leads.append(
                     RawLead(
@@ -65,7 +70,7 @@ class FreelancehuntParser(BaseParser):
                         description=desc,
                         url=link,
                         budget=budget,
-                        category="all",
+                        category=category,
                         published_at=pub_date,
                         raw_text=raw_text,
                     )

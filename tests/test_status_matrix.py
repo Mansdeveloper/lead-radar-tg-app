@@ -1,11 +1,14 @@
 import asyncio
-import io
-import sys
 from datetime import datetime, timedelta, timezone
+import sys
+import unittest
 
 if sys.platform == "win32":
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -412,5 +415,10 @@ async def test_full_matrix():
     print("=" * 65)
 
 
+class TestStatusMatrixSuite(unittest.IsolatedAsyncioTestCase):
+    async def test_all_scenarios(self):
+        await test_full_matrix()
+
+
 if __name__ == "__main__":
-    asyncio.run(test_full_matrix())
+    unittest.main()

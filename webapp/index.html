@@ -297,6 +297,13 @@
           <span id="orders-count-label">Загрузка заказов...</span>
         </div>
 
+        <!-- LIVE RADAR FLOATING BADGE -->
+        <div id="new-leads-badge" onclick="applyPendingNewLeads()" class="hidden sticky top-2 z-30 mx-auto w-fit py-2 px-4 rounded-full bg-[#007AFF] text-white font-bold font-display text-xs shadow-lg shadow-[#007AFF]/35 flex items-center justify-center space-x-2 active:scale-95 transition-all cursor-pointer">
+          <span class="animate-pulse">⚡</span>
+          <span id="new-leads-badge-text">Есть новые заказы</span>
+          <span>↑</span>
+        </div>
+
         <div id="leads-list" class="space-y-3">
           <div class="py-16 text-center text-xs text-[#8E8E93]">Загрузка свежих заказов...</div>
         </div>
@@ -1112,7 +1119,16 @@
 
       updateNavUI(tabName);
 
-      if (tabName === 'feed') renderFeed();
+      if (tabName === 'feed') {
+        if (pendingNewLeads) {
+          rawLeads = pendingNewLeads;
+          pendingNewLeads = null;
+          const badge = document.getElementById('new-leads-badge');
+          if (badge) badge.classList.add('hidden');
+          updateVolumeStats();
+        }
+        renderFeed();
+      }
       if (tabName === 'profile') {
         loadUserData();
         loadAchievements();
@@ -1512,6 +1528,181 @@
       }
     }
 
+    const PITCH_EXPERIENCE = {
+      bot: 'Недавно реализовал похожий Telegram-бот с базами данных, продуманной логикой и удобной админкой (могу показать рабочие кейсы).',
+      python: 'Регулярно реализую подобные задачи на Python — на прошлой неделе запускал аналогичный парсер с обходом защит и выгрузкой данных.',
+      frontend: 'Специализируюсь на чистой адаптивной верстке и веб-разработке (React / Vue / HTML / Tailwind), делаю быстро, аккуратно и с вниманием к деталям.',
+      backend: 'Имею солидный опыт проектирования надежных API и серверной части, настраивал аналогичные интеграции и оптимизировал архитектуру.',
+      mobile: 'Разрабатываю кроссплатформенные и нативные мобильные приложения (Flutter / React Native) с плавным UI и стабильной синхронизацией.',
+      design: 'Специализируюсь на продуманном UI/UX дизайне в Figma: создаю эстетичные и конвертящие интерфейсы с готовой системой под верстку.',
+      '1c': 'Есть практический опыт внедрения и доработки решений на 1С и Битрикс, настрою корректный обмен данными без сбоев.',
+      marketing: 'Регулярно веду рекламные кампании и оптимизирую воронки в этой нише с упором на окупаемость и снижение стоимости целевого лида.',
+      copywriting: 'Пишу структурированные и вовлекающие тексты без воды, которые решают задачу бизнеса и удерживают внимание целевой аудитории.',
+      copy: 'Пишу структурированные и вовлекающие тексты без воды, которые решают задачу бизнеса и удерживают внимание целевой аудитории.',
+      analytics: 'Строю понятные сквозные дашборды и отчеты (Power BI / SQL / Excel), помогая бизнесу принимать решения на основе точных цифр.',
+      devops: 'Профессионально настраиваю сервера, Docker-контейнеры и CI/CD пайплайны с гарантией стабильности и безопасности.',
+      gamedev: 'Имею опыт разработки игровой механики и оптимизации графики, готов продемонстрировать примеры реализованных проектов.',
+      other: 'Имею успешный практический опыт реализации подобных проектов под ключ и готов оперативно приступить к работе.'
+    };
+
+    const PITCH_QUESTIONS = {
+      bot: 'Подскажите, есть ли уже готовая блок-схема сценариев или обсудим структуру бота в диалоге?',
+      python: 'Подскажите, в каком формате требуется выгрузка данных (Excel/CSV, Google Таблицы или база данных)?',
+      frontend: 'Подскажите, есть ли уже готовый дизайн-макет в Figma или нужно помочь с визуальной частью?',
+      backend: 'Подскажите, есть ли готовое ТЗ/спецификация API или согласуем детали интеграции в сообщениях?',
+      mobile: 'Подскажите, планируется публикация в App Store / Google Play или на первом этапе нужен тестовый билд?',
+      design: 'Подскажите, есть ли референсы по стилю или брендбук, от которых отталкиваемся?',
+      '1c': 'Подскажите, какая сейчас используется конфигурация 1С и есть ли тестовая база для безопасной отладки?',
+      marketing: 'Подскажите, на какой регион планируется кампания и какая текущая стоимость привлечения клиента?',
+      copywriting: 'Подскажите, для какой площадки готовится материал и какой целевой объем текста?',
+      copy: 'Подскажите, для какой площадки готовится материал и какой целевой объем текста?',
+      analytics: 'Подскажите, из каких источников собираются первичные данные и где удобнее видеть итоговый дашборд?',
+      devops: 'Подскажите, где развернута текущая инфраструктура (облако/VPS) и есть ли требования к отказоустойчивости?',
+      gamedev: 'Подскажите, на какую целевую платформу ориентируемся и есть ли готовые ассеты/диздок?',
+      other: 'Подскажите, есть ли детальное ТЗ или обсудим ключевые нюансы и сроки в диалоге?'
+    };
+
+    function cleanLeadEssence(title, desc) {
+      let raw = (title || desc || '').trim();
+      if (!raw) return 'реализовать данный проект';
+      raw = raw.replace(/^(?:срочно\s+)?(?:требуется|нужен|нужна|нужно|нужны|ищу|ищем|необходимо|требуются)\s+/i, '');
+      raw = raw.replace(/^(?:проект:\s*|задача:\s*|заказ:\s*)/i, '');
+      raw = raw.replace(/[\.\,\!\?\:\;\-]+$/g, '').trim();
+      if (raw.length < 3) raw = (title || '').slice(0, 60).trim();
+      if (raw.length > 80) {
+        const match = raw.match(/^(.*?)(?:,|\s[-–—]\s|\.|\()/);
+        if (match && match[1].length >= 20) {
+          raw = match[1].trim();
+        } else {
+          raw = raw.slice(0, 80).replace(/\s\S*$/, '').trim();
+        }
+      }
+      return raw;
+    }
+
+    function detectLeadTag(lead) {
+      if (lead.category && lead.category !== 'all' && lead.category !== 'other') {
+        const cat = String(lead.category).toLowerCase().trim();
+        if (PITCH_EXPERIENCE[cat]) return cat;
+        if (cat === 'copywriting' && PITCH_EXPERIENCE.copy) return 'copy';
+      }
+      const text = `${lead.title || ''} ${lead.description || ''}`.toLowerCase();
+      for (const tag of ALL_TAGS) {
+        const kws = SPECIALTY_KEYWORDS[tag] || [];
+        for (const kw of kws) {
+          if (text.includes(kw)) return tag;
+        }
+      }
+      return 'other';
+    }
+
+    function generateLeadPitch(lead) {
+      const tag = detectLeadTag(lead);
+      const essence = cleanLeadEssence(lead.title, lead.description);
+      const firstWord = essence.split(/\s+/)[0] || '';
+      let formattedEssence = essence;
+      if (firstWord && !/[A-Z0-9]/.test(firstWord[0])) {
+        formattedEssence = essence.charAt(0).toLowerCase() + essence.slice(1);
+      }
+      const s1 = `Здравствуйте! Внимательно ознакомился с задачей: ${formattedEssence}.`;
+      const s2 = PITCH_EXPERIENCE[tag] || PITCH_EXPERIENCE.other;
+      const s3 = PITCH_QUESTIONS[tag] || PITCH_QUESTIONS.other;
+      return `${s1} ${s2} ${s3}`;
+    }
+
+    async function copyPitch(leadId) {
+      const lead = rawLeads.find(l => String(l.id) === String(leadId));
+      if (!lead) return;
+      const pitchText = generateLeadPitch(lead);
+      await copyTextToClipboard(pitchText);
+      tg?.HapticFeedback?.notificationOccurred('success');
+      showToast('✅ Отклик скопирован в буфер');
+    }
+
+    async function copyTextToClipboard(text) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+          await navigator.clipboard.writeText(text);
+          return true;
+        } catch (e) {}
+      }
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.top = '0';
+        ta.style.left = '0';
+        ta.style.opacity = '0';
+        ta.style.pointerEvents = 'none';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        ta.setSelectionRange(0, 99999);
+        const successful = document.execCommand('copy');
+        document.body.removeChild(ta);
+        return successful;
+      } catch (err) {
+        return false;
+      }
+    }
+
+    let pendingNewLeads = null;
+    let liveRadarInterval = null;
+
+    async function checkLiveRadarUpdates() {
+      if (currentActiveTab !== 'feed' || document.hidden) return;
+      try {
+        const res = await fetch('/api/leads?limit=100');
+        const data = await res.json();
+        if (!data.ok || !data.leads) return;
+
+        if (rawLeads.length === 0) {
+          rawLeads = data.leads;
+          updateVolumeStats();
+          renderFeed();
+          return;
+        }
+
+        const existingIds = new Set(rawLeads.map(l => l.id));
+        const newItems = data.leads.filter(l => !existingIds.has(l.id));
+
+        if (newItems.length > 0) {
+          const currentScroll = window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || 0;
+          const isScrolled = currentScroll > 80;
+          if (isScrolled) {
+            pendingNewLeads = data.leads;
+            const badge = document.getElementById('new-leads-badge');
+            const badgeText = document.getElementById('new-leads-badge-text');
+            if (badge && badgeText) {
+              badgeText.textContent = `⚡ Есть новые заказы (+${newItems.length})`;
+              badge.classList.remove('hidden');
+            }
+          } else {
+            rawLeads = data.leads;
+            updateVolumeStats();
+            renderFeed();
+            showToast(`⚡ Добавлено ${newItems.length} новых заказов`);
+          }
+        }
+      } catch (e) {
+        console.warn('Live Radar polling error:', e);
+      }
+    }
+
+    function applyPendingNewLeads() {
+      if (pendingNewLeads) {
+        rawLeads = pendingNewLeads;
+        pendingNewLeads = null;
+      }
+      const badge = document.getElementById('new-leads-badge');
+      if (badge) badge.classList.add('hidden');
+      updateVolumeStats();
+      renderFeed();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      tg?.HapticFeedback?.impactOccurred('medium');
+    }
+
     async function fetchLeads() {
       try {
         const res = await fetch('/api/leads?limit=100');
@@ -1597,11 +1788,12 @@
               </p>
             </div>
 
-            <div class="pt-2 flex items-center justify-between border-t border-black/[0.04] dark:border-white/[0.06]">
-              <span class="text-xs font-semibold text-[#8E8E93] font-sans">
-                Прямой заказ
-              </span>
-              <span class="px-3.5 py-1.5 rounded-xl bg-[#F2F2F7] dark:bg-[#2C2C2E] group-hover:bg-[#007AFF] text-zinc-900 dark:text-white group-hover:text-white flex items-center space-x-1.5 font-bold font-display text-xs transition-all shadow-sm">
+            <div class="pt-2 flex items-center justify-between gap-2 border-t border-black/[0.04] dark:border-white/[0.06]">
+              <button onclick="event.stopPropagation(); copyPitch(${lead.id});" class="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 active:scale-95 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center space-x-1.5 font-bold font-display text-xs transition-all shrink-0" title="Скопировать готовый персонализированный отклик">
+                <span>💡</span>
+                <span>Шаблон отклика</span>
+              </button>
+              <span class="px-3.5 py-1.5 rounded-xl bg-[#F2F2F7] dark:bg-[#2C2C2E] group-hover:bg-[#007AFF] text-zinc-900 dark:text-white group-hover:text-white flex items-center space-x-1.5 font-bold font-display text-xs transition-all shadow-sm shrink-0">
                 <span>Откликнуться</span>
                 <span>↗</span>
               </span>
@@ -1950,6 +2142,10 @@
     loadUserData();
     loadAchievements();
     initNavDrag();
+
+    if (!liveRadarInterval) {
+      liveRadarInterval = setInterval(checkLiveRadarUpdates, 28000);
+    }
   </script>
 </body>
 </html>
