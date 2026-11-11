@@ -19,6 +19,8 @@ from aiohttp import web
 from aiohttp.test_utils import AioHTTPTestCase, unittest_run_loop
 from aiogram.types import CallbackQuery, Message, User as TgUser
 
+from sqlalchemy import delete
+
 from database.models import Lead, User, UserFilter
 from database.session import async_session, init_db
 from database.crud import (
@@ -252,22 +254,31 @@ class TestLeadKeyboardAndPitchIntegration(unittest.IsolatedAsyncioTestCase):
     async def test_synthetic_test_leads_excluded_from_public_feed(self):
         # Insert a synthetic test lead with test_ prefix
         test_ext = "test_user_feed_isolation_1"
-        await save_lead(
-            source="fl_ru",
-            external_id=test_ext,
-            title="Синтетический тестовый заказ",
-            description="Секретный тест",
-            url="https://fl.ru/projects/sample",
-            budget="100 000 ₽",
-            category="bot",
-            published_at=datetime.now(timezone.utc),
-        )
+        async with async_session() as s:
+            await s.execute(delete(Lead).where(Lead.external_id == test_ext))
+            await s.commit()
 
-        leads = await get_recent_leads(limit=50, include_test=False)
-        self.assertNotIn(test_ext, [l.external_id for l in leads], "Synthetic test leads must not be in public feed")
+        try:
+            await save_lead(
+                source="fl_ru",
+                external_id=test_ext,
+                title="Синтетический тестовый заказ",
+                description="Секретный тест",
+                url="https://fl.ru/projects/sample",
+                budget="100 000 ₽",
+                category="bot",
+                published_at=datetime.now(timezone.utc),
+            )
 
-        leads_with_test = await get_recent_leads(limit=50, include_test=True)
-        self.assertIn(test_ext, [l.external_id for l in leads_with_test], "include_test=True must return test leads")
+            leads = await get_recent_leads(limit=50, include_test=False)
+            self.assertNotIn(test_ext, [l.external_id for l in leads], "Synthetic test leads must not be in public feed")
+
+            leads_with_test = await get_recent_leads(limit=50, include_test=True)
+            self.assertIn(test_ext, [l.external_id for l in leads_with_test], "include_test=True must return test leads")
+        finally:
+            async with async_session() as s:
+                await s.execute(delete(Lead).where(Lead.external_id == test_ext))
+                await s.commit()
 
 
 class TestWebAppPitchAPI(AioHTTPTestCase):

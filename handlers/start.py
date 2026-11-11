@@ -195,7 +195,7 @@ async def send_onboarding_sample_lead(bot, user_id: int, selected_cat: str) -> N
             matching_lead = _lead_model_to_raw(exact_leads[0])
             target_lead_id = exact_leads[0].id
         else:
-            recent = await get_recent_leads(limit=50, include_test=False)
+            recent = await get_recent_leads(limit=100, include_test=False)
             for l in recent:
                 lead_text = f"{l.title} {l.description}".lower()
                 if matches_filter(
@@ -291,7 +291,7 @@ async def render_welcome(
     is_unonboarded = (user_filter.categories or "").strip().lower() == "none"
 
     # Show 1-step onboarding screen for newly created users (or users who haven't picked a specialty yet)
-    if isinstance(event, Message) and (created or is_unonboarded):
+    if (created or is_unonboarded) and not notice:
         trial_hours = status.get("trial_hours_left", settings.TRIAL_HOURS_DEFAULT)
         onboarding_text = (
             "👋 <b>Добро пожаловать в Lead Radar!</b>\n\n"
@@ -301,11 +301,29 @@ async def render_welcome(
             "👇 <b>Выберите вашу специализацию в 1 клик</b>, чтобы получать только целевые заказы "
             "(до выбора спам приходить не будет):"
         )
-        await event.answer(
-            onboarding_text,
-            parse_mode="HTML",
-            reply_markup=build_onboarding_keyboard(),
-        )
+        kb_onboard = build_onboarding_keyboard()
+        if isinstance(event, CallbackQuery):
+            try:
+                await event.message.edit_text(
+                    onboarding_text,
+                    parse_mode="HTML",
+                    reply_markup=kb_onboard,
+                )
+            except Exception as exc:
+                if "message is not modified" not in str(exc).lower():
+                    await event.message.answer(
+                        onboarding_text,
+                        parse_mode="HTML",
+                        reply_markup=kb_onboard,
+                    )
+            if answer_callback:
+                await event.answer(callback_toast)
+        else:
+            await event.answer(
+                onboarding_text,
+                parse_mode="HTML",
+                reply_markup=kb_onboard,
+            )
         return
 
     is_active = getattr(db_user, "is_active", True)
@@ -365,8 +383,9 @@ async def render_welcome(
     if isinstance(event, CallbackQuery):
         try:
             await event.message.edit_text(welcome_text, parse_mode="HTML", reply_markup=keyboard)
-        except Exception:
-            await event.message.answer(welcome_text, parse_mode="HTML", reply_markup=keyboard)
+        except Exception as exc:
+            if "message is not modified" not in str(exc).lower():
+                await event.message.answer(welcome_text, parse_mode="HTML", reply_markup=keyboard)
         if answer_callback:
             await event.answer(callback_toast)
     else:
@@ -565,7 +584,7 @@ async def toggle_leads_callback(callback: CallbackQuery):
     await callback.answer(toast_msg, show_alert=True)
     if callback.message and callback.message.text and "Профиль" in callback.message.text:
         from handlers.profile import show_profile
-        await show_profile(callback)
+        await show_profile(callback, answer_callback=False)
     else:
         await render_welcome(callback, answer_callback=False)
 

@@ -31,14 +31,16 @@ from database.crud import (
 )
 from database.models import Achievement, Lead, User, UserFilter
 from database.session import async_session, engine, ensure_sqlite_parent_dir, init_db
-from handlers.filters import process_keywords
+from handlers.filters import process_keywords, process_stop_words, render_filters_text, reset_filters_handler
 from handlers.help import build_help_text, show_help
 from handlers.payments import process_successful_payment
 from handlers.profile import show_profile
 from handlers.start import (
     ONBOARDING_CATEGORIES,
+    back_to_menu_callback,
     handle_onboarding_category,
     render_welcome,
+    toggle_leads_callback,
 )
 from main import (
     BOT_COMMANDS,
@@ -497,6 +499,118 @@ class TestWebAppHygieneAndHtml(AioHTTPTestCase):
         self.assertNotIn("Хабр Фриланс", html_text)
         self.assertIn("Telegram-каналы заказов", html_text)
         self.assertIn("Мониторинг чатов и каналов", html_text)
+
+
+class TestHardenedEdgeCases(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        await init_db()
+        self.test_uids = [870030, 870031, 870032]
+        async with async_session() as s:
+            await s.execute(delete(User).where(User.telegram_id.in_(self.test_uids)))
+            await s.execute(delete(UserFilter).where(UserFilter.user_telegram_id.in_(self.test_uids)))
+            await s.execute(delete(Achievement).where(Achievement.user_telegram_id.in_(self.test_uids)))
+            await s.commit()
+
+    async def asyncTearDown(self):
+        async with async_session() as s:
+            await s.execute(delete(User).where(User.telegram_id.in_(self.test_uids)))
+            await s.execute(delete(UserFilter).where(UserFilter.user_telegram_id.in_(self.test_uids)))
+            await s.execute(delete(Achievement).where(Achievement.user_telegram_id.in_(self.test_uids)))
+            await s.commit()
+        await engine.dispose()
+
+    def test_ensure_sqlite_parent_dir_skips_file_mode_memory(self):
+        with patch.object(Path, "mkdir") as mock_mkdir:
+            ensure_sqlite_parent_dir("sqlite+aiosqlite:///file:/nonexistent_mem_dir/db?mode=memory&cache=shared")
+            mock_mkdir.assert_not_called()
+
+    async def test_back_to_menu_keeps_unonboarded_user_on_onboarding(self):
+        await get_or_create_user(870030, username="unonb_cb")
+
+        cb = MagicMock(spec=CallbackQuery)
+        cb.data = "back_to_menu"
+        cb.from_user = TgUser(id=870030, is_bot=False, first_name="Unonb", username="unonb_cb")
+        cb.bot = AsyncMock()
+        cb.message = AsyncMock()
+        cb.answer = AsyncMock()
+
+        await back_to_menu_callback(cb)
+
+        cb.message.edit_text.assert_called_once()
+        text = cb.message.edit_text.call_args[0][0]
+        self.assertIn("Выберите вашу специализацию", text)
+        self.assertNotIn("лиды приходят", text)
+        cb.answer.assert_called_once()
+
+    async def test_filters_html_escaping_non_text_fsm_and_single_callback_answer(self):
+        await get_or_create_user(870031, username="filt_user")
+        await update_user_full_filters(870031, keywords="c# <script>", stop_words="a&b", categories="backend")
+
+        rendered = await render_filters_text(870031)
+        self.assertIn("c# &lt;script&gt;", rendered)
+        self.assertIn("a&amp;b", rendered)
+
+        # Non-text FSM messages must not crash with AttributeError
+        non_text_msg = MagicMock(spec=Message)
+        non_text_msg.from_user = TgUser(id=870031, is_bot=False, first_name="Filt")
+        non_text_msg.text = None
+        non_text_msg.answer = AsyncMock()
+        state = AsyncMock()
+        await process_keywords(non_text_msg, state)
+        await process_stop_words(non_text_msg, state)
+        self.assertEqual(non_text_msg.answer.call_count, 2)
+        state.clear.assert_not_called()
+
+        # Reset filters must answer callback once and handle unmodified edit_text safely
+        cb_reset = MagicMock(spec=CallbackQuery)
+        cb_reset.data = "reset_filters"
+        cb_reset.from_user = TgUser(id=870031, is_bot=False, first_name="Filt")
+        cb_reset.message = AsyncMock()
+        cb_reset.message.edit_text = AsyncMock(side_effect=RuntimeError("Bad Request: message is not modified"))
+        cb_reset.answer = AsyncMock()
+        await reset_filters_handler(cb_reset)
+        cb_reset.answer.assert_called_once_with("🔄 Фильтры сброшены", show_alert=True)
+        cb_reset.message.answer.assert_not_called()
+
+    async def test_toggle_leads_from_profile_answers_callback_once(self):
+        await get_or_create_user(870032, username="prof_toggle")
+        mock_bot = AsyncMock()
+        mock_me = MagicMock()
+        mock_me.username = "fast_leadss_bot"
+        mock_bot.get_me = AsyncMock(return_value=mock_me)
+
+        cb = MagicMock(spec=CallbackQuery)
+        cb.data = "toggle_leads"
+        cb.from_user = TgUser(id=870032, is_bot=False, first_name="Prof", username="prof_toggle")
+        cb.bot = mock_bot
+        cb.message = AsyncMock()
+        cb.message.text = "👤 Профиль фрилансера"
+        cb.answer = AsyncMock()
+
+        await toggle_leads_callback(cb)
+        cb.answer.assert_called_once()
+        cb.message.edit_text.assert_called_once()
+
+    async def test_admin_payment_alert_uses_plain_text_parse_mode_none(self):
+        await get_or_create_user(870032, username="html_utm_buyer", utm_source="utm_<bad>&source")
+
+        mock_bot = AsyncMock()
+        payment = MagicMock(spec=SuccessfulPayment)
+        payment.total_amount = 250
+
+        msg = MagicMock(spec=Message)
+        msg.from_user = TgUser(id=870032, is_bot=False, first_name="Buyer", username="html_utm_buyer")
+        msg.successful_payment = payment
+        msg.answer = AsyncMock()
+        msg.bot = mock_bot
+
+        with patch.object(settings, "ADMIN_IDS", "1001"):
+            await process_successful_payment(msg)
+
+        mock_bot.send_message.assert_called_once()
+        kwargs = mock_bot.send_message.call_args.kwargs
+        self.assertIsNone(kwargs["parse_mode"])
+        self.assertIn("utm_<bad>&source", kwargs["text"])
 
 
 if __name__ == "__main__":

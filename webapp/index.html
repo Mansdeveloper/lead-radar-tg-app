@@ -921,7 +921,12 @@
       if (savedSpecs) {
         const parsedSpecs = JSON.parse(savedSpecs);
         if (Array.isArray(parsedSpecs)) {
-          parsedSpecs.forEach(s => selectedSpecialties.add(s));
+          parsedSpecs.forEach(s => {
+            const norm = String(s).trim().toLowerCase();
+            if (norm && norm !== 'none' && norm !== 'all') {
+              selectedSpecialties.add(norm === 'copywriting' ? 'copy' : norm);
+            }
+          });
         }
       }
     } catch (e) {}

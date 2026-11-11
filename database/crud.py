@@ -31,6 +31,11 @@ async def get_or_create_user(
                 utm_source=utm_source,
             )
             session.add(user)
+            existing_fil = await session.execute(
+                select(UserFilter).where(UserFilter.user_telegram_id == telegram_id)
+            )
+            if not existing_fil.scalar_one_or_none():
+                session.add(UserFilter(user_telegram_id=telegram_id, categories="none"))
             await session.commit()
             await session.refresh(user)
             created = True
@@ -66,7 +71,7 @@ async def get_or_create_user(
                 await session.commit()
                 await session.refresh(user)
 
-        # Ensure filter exists for user; new users start with categories="none" until 1-step onboarding choice
+        # Ensure filter exists for legacy users missing a UserFilter row
         fil_res = await session.execute(
             select(UserFilter).where(UserFilter.user_telegram_id == telegram_id)
         )

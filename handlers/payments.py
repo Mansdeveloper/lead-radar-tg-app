@@ -128,6 +128,7 @@ async def process_successful_payment(message: Message):
                 await message.bot.send_message(
                     chat_id=admin_id,
                     text=admin_text,
+                    parse_mode=None,
                     disable_notification=True,
                 )
             except Exception as exc:

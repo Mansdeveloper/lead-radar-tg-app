@@ -1,3 +1,4 @@
+import html
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -39,15 +40,15 @@ def get_filters_keyboard() -> InlineKeyboardMarkup:
 
 async def render_filters_text(telegram_id: int) -> str:
     user_filter = await get_user_filters(telegram_id)
-    kw = user_filter.keywords if user_filter.keywords else "<i>Все заказы подряд</i>"
-    sw = user_filter.stop_words if user_filter.stop_words else "<i>Не заданы</i>"
+    kw = html.escape(user_filter.keywords) if user_filter.keywords else "<i>Все заказы подряд</i>"
+    sw = html.escape(user_filter.stop_words) if user_filter.stop_words else "<i>Не заданы</i>"
     cats_raw = (user_filter.categories or "all").strip().lower()
     if cats_raw == "none":
         cat_text = "<i>Не выбран (выберите в /start)</i>"
     elif cats_raw == "all":
         cat_text = "<i>Все направления</i>"
     else:
-        cat_text = cats_raw
+        cat_text = html.escape(cats_raw)
 
     return (
         "⚙️ <b>Настройки фильтрации заказов</b>\n\n"
@@ -63,14 +64,19 @@ async def render_filters_text(telegram_id: int) -> str:
 
 @router.message(Command("filters"))
 @router.callback_query(F.data == "open_filters")
-async def show_filters(event: Message | CallbackQuery):
+async def show_filters(event: Message | CallbackQuery, answer_callback: bool = True):
     user_id = event.from_user.id
     text = await render_filters_text(user_id)
     kb = get_filters_keyboard()
 
     if isinstance(event, CallbackQuery):
-        await event.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
-        await event.answer()
+        try:
+            await event.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
+        except Exception as exc:
+            if "message is not modified" not in str(exc).lower():
+                await event.message.answer(text, parse_mode="HTML", reply_markup=kb)
+        if answer_callback:
+            await event.answer()
     else:
         await event.answer(text, parse_mode="HTML", reply_markup=kb)
 
@@ -89,6 +95,9 @@ async def ask_keywords(callback: CallbackQuery, state: FSMContext):
 
 @router.message(FilterStates.waiting_for_keywords)
 async def process_keywords(message: Message, state: FSMContext):
+    if not message.text:
+        await message.answer("✏️ Отправьте текстовое сообщение со списком ключевых слов через запятую.")
+        return
     text = message.text.strip()
     if text.lower() in ["все", "all", "всё"]:
         keywords = ""
@@ -127,6 +136,9 @@ async def ask_stop_words(callback: CallbackQuery, state: FSMContext):
 
 @router.message(FilterStates.waiting_for_stop_words)
 async def process_stop_words(message: Message, state: FSMContext):
+    if not message.text:
+        await message.answer("🚫 Отправьте текстовое сообщение со списком стоп-слов через запятую.")
+        return
     text = message.text.strip()
     if text.lower() in ["нет", "none", "очистить"]:
         stop_words = ""
@@ -150,4 +162,4 @@ async def reset_filters_handler(callback: CallbackQuery):
         categories="all",
     )
     await callback.answer("🔄 Фильтры сброшены", show_alert=True)
-    await show_filters(callback)
+    await show_filters(callback, answer_callback=False)

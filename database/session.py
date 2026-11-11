@@ -23,10 +23,14 @@ def ensure_sqlite_parent_dir(database_url: str) -> None:
     if not db_name or db_name == ":memory:" or db_name.startswith("file::memory:"):
         return
 
+    if str(url.query.get("mode", "")).lower() == "memory":
+        return
+
     if db_name.startswith("file:"):
-        db_name = db_name[5:].split("?", 1)[0]
-        if not db_name or db_name == ":memory:":
+        file_part, _, query_part = db_name[5:].partition("?")
+        if "mode=memory" in query_part.lower() or not file_part or file_part == ":memory:":
             return
+        db_name = file_part
 
     parent_dir = Path(db_name).parent
     if parent_dir and str(parent_dir) != ".":

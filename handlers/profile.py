@@ -10,7 +10,7 @@ router = Router()
 
 @router.message(Command("profile"))
 @router.callback_query(F.data == "open_profile")
-async def show_profile(event: Message | CallbackQuery):
+async def show_profile(event: Message | CallbackQuery, answer_callback: bool = True):
     user_id = event.from_user.id
     try:
         from services.achievements import check_and_grant_achievements
@@ -71,7 +71,12 @@ async def show_profile(event: Message | CallbackQuery):
     )
 
     if isinstance(event, CallbackQuery):
-        await event.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
-        await event.answer()
+        try:
+            await event.message.edit_text(text, parse_mode="HTML", reply_markup=kb)
+        except Exception as exc:
+            if "message is not modified" not in str(exc).lower():
+                await event.message.answer(text, parse_mode="HTML", reply_markup=kb)
+        if answer_callback:
+            await event.answer()
     else:
         await event.answer(text, parse_mode="HTML", reply_markup=kb)
