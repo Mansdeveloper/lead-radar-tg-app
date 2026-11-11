@@ -1,7 +1,42 @@
+import logging
+from pathlib import Path
 from sqlalchemy import event, inspect, text
+from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from config import settings
 from database.models import Base
+
+logger = logging.getLogger(__name__)
+
+
+def ensure_sqlite_parent_dir(database_url: str) -> None:
+    """Safely create the parent directory for file-based SQLite URLs if permissions allow."""
+    try:
+        url = make_url(database_url)
+    except Exception:
+        return
+
+    if not url.drivername.startswith("sqlite"):
+        return
+
+    db_name = url.database
+    if not db_name or db_name == ":memory:" or db_name.startswith("file::memory:"):
+        return
+
+    if db_name.startswith("file:"):
+        db_name = db_name[5:].split("?", 1)[0]
+        if not db_name or db_name == ":memory:":
+            return
+
+    parent_dir = Path(db_name).parent
+    if parent_dir and str(parent_dir) != ".":
+        try:
+            parent_dir.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            logger.warning(f"Could not create SQLite directory '{parent_dir}': {exc}")
+
+
+ensure_sqlite_parent_dir(settings.DATABASE_URL)
 
 engine = create_async_engine(settings.DATABASE_URL, echo=False)
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
@@ -48,6 +83,7 @@ def _migrate_db(connection):
 
 
 async def init_db() -> None:
+    ensure_sqlite_parent_dir(settings.DATABASE_URL)
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         await conn.run_sync(_migrate_db)

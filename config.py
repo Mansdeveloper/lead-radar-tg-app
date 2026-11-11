@@ -27,6 +27,7 @@ class Settings(BaseSettings):
 
     # Admin settings (default: bot creator telegram_id)
     ADMIN_IDS: str = "875592041"
+    SUPPORT_CONTACT: str = os.environ.get("SUPPORT_CONTACT", "")
 
     def get_admin_ids(self) -> set[int]:
         ids = set()

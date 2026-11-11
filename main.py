@@ -5,11 +5,11 @@ from aiohttp import web
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
-from aiogram.types import MenuButtonWebApp, WebAppInfo
+from aiogram.types import BotCommand, MenuButtonWebApp, WebAppInfo
 
 from config import settings
 from database.session import init_db
-from handlers import filters, payments, profile, start
+from handlers import filters, help as help_handler, payments, profile, start
 from parsers.manager import IngestionManager
 from services.promo_notifier import PromoNotifier
 from services.trial_notifier import TrialNotifier
@@ -21,6 +21,63 @@ logging.basicConfig(
     stream=sys.stdout,
 )
 logger = logging.getLogger("LeadRadarBot")
+
+BOT_COMMANDS = [
+    BotCommand(command="start", description="🚀 Главный радар и статус"),
+    BotCommand(command="filters", description="🎯 Настройка стека и фильтров"),
+    BotCommand(command="test_lead", description="🧪 Проверить радар (Тестовый лид)"),
+    BotCommand(command="premium", description="⚡ Подключить 0 сек (Premium)"),
+    BotCommand(command="profile", description="👤 Профиль и рефералы"),
+    BotCommand(command="help", description="❓ Помощь и оплата Stars"),
+]
+
+BOT_DESCRIPTION = (
+    "⚡ Lead Radar — перехват горячих заказов с FL.ru и Freelancehunt в реальном времени.\n\n"
+    "🎯 80% заказов забирают те, кто откликнулся в первые 3 минуты.\n\n"
+    "Что внутри:\n"
+    "• 24ч Welcome Trial бесплатно — мгновенные пуши за 0–2 сек\n"
+    "• Генератор готовых откликов под каждый заказ в 1 клик\n"
+    "• Умные фильтры по стеку, ключевым словам и стоп-словам\n"
+    "• Оплата Premium через Telegram Stars или бонусы за друзей\n\n"
+    "Жмите Start, выберите стек и получите первый свежий заказ прямо сейчас!"
+)
+
+BOT_SHORT_DESCRIPTION = (
+    "⚡ Перехват заказов с фриланс-бирж за 0 сек! 24ч Welcome Trial бесплатно + генератор откликов."
+)
+
+
+async def configure_bot_profile(bot: Bot) -> None:
+    """Configure Telegram command menu, bot description, short description, and WebApp button."""
+    try:
+        await bot.set_my_commands(BOT_COMMANDS)
+        logger.info("Telegram bot commands configured.")
+    except Exception as e:
+        logger.warning(f"Could not set bot commands: {e}")
+
+    try:
+        await bot.set_my_description(description=BOT_DESCRIPTION)
+        logger.info("Telegram bot description configured.")
+    except Exception as e:
+        logger.warning(f"Could not set bot description: {e}")
+
+    try:
+        await bot.set_my_short_description(short_description=BOT_SHORT_DESCRIPTION)
+        logger.info("Telegram bot short description configured.")
+    except Exception as e:
+        logger.warning(f"Could not set bot short description: {e}")
+
+    if settings.WEBAPP_URL:
+        try:
+            await bot.set_chat_menu_button(
+                menu_button=MenuButtonWebApp(
+                    text="🚀 Открыть Радар",
+                    web_app=WebAppInfo(url=settings.WEBAPP_URL),
+                )
+            )
+            logger.info(f"Telegram MenuButton configured with WebApp URL: {settings.WEBAPP_URL}")
+        except Exception as e:
+            logger.warning(f"Could not set MenuButtonWebApp: {e}")
 
 
 async def main():
@@ -44,19 +101,9 @@ async def main():
     dp.include_router(filters.router)
     dp.include_router(payments.router)
     dp.include_router(profile.router)
+    dp.include_router(help_handler.router)
 
-    # Configure Telegram Menu Button for WebApp if URL provided
-    if settings.WEBAPP_URL:
-        try:
-            await bot.set_chat_menu_button(
-                menu_button=MenuButtonWebApp(
-                    text="🚀 Открыть Радар",
-                    web_app=WebAppInfo(url=settings.WEBAPP_URL),
-                )
-            )
-            logger.info(f"Telegram MenuButton configured with WebApp URL: {settings.WEBAPP_URL}")
-        except Exception as e:
-            logger.warning(f"Could not set MenuButtonWebApp: {e}")
+    await configure_bot_profile(bot)
 
     # Start RSS Ingestion Manager
     ingestion = IngestionManager(bot=bot)

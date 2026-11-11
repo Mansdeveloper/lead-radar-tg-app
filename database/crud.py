@@ -66,12 +66,13 @@ async def get_or_create_user(
                 await session.commit()
                 await session.refresh(user)
 
-        # Ensure filter exists for user
+        # Ensure filter exists for user; new users start with categories="none" until 1-step onboarding choice
         fil_res = await session.execute(
             select(UserFilter).where(UserFilter.user_telegram_id == telegram_id)
         )
         if not fil_res.scalar_one_or_none():
-            new_filter = UserFilter(user_telegram_id=telegram_id)
+            default_categories = "none" if created else "all"
+            new_filter = UserFilter(user_telegram_id=telegram_id, categories=default_categories)
             session.add(new_filter)
             await session.commit()
 

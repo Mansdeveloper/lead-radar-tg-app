@@ -1,3 +1,4 @@
+import logging
 from aiogram import F, Router
 from aiogram.filters import Command
 from aiogram.types import (
@@ -10,8 +11,9 @@ from aiogram.types import (
 )
 
 from config import settings
-from database.crud import get_user_status, grant_premium
+from database.crud import get_user, get_user_status, grant_premium
 
+logger = logging.getLogger(__name__)
 router = Router()
 
 
@@ -47,6 +49,9 @@ async def show_premium_offer(event: Message | CallbackQuery):
                 InlineKeyboardButton(
                     text=f"⭐️ Оплатить {settings.STARS_PRICE} Stars", callback_data="pay_stars"
                 )
+            ],
+            [
+                InlineKeyboardButton(text="❓ Как купить Stars (РФ)", callback_data="open_help")
             ],
             [
                 InlineKeyboardButton(text="👥 Получить бесплатно за рефералов", callback_data="open_profile")
@@ -102,3 +107,28 @@ async def process_successful_payment(message: Message):
         "Теперь все новые заказы будут приходить вам мгновенно в первую секунду публикации. Успешных откликов!"
     )
     await message.answer(success_text, parse_mode="HTML")
+
+    # Notify all admins quietly about the payment
+    db_user = await get_user(user_id)
+    username = (
+        message.from_user.username
+        or (db_user.username if db_user else None)
+        or "no_username"
+    )
+    utm_source = db_user.utm_source if db_user else None
+    ref_count = (db_user.referral_count or 0) if db_user else 0
+    admin_text = (
+        f"💰 НОВАЯ ОПЛАТА: {payment.total_amount} Stars от @{username} "
+        f"(ID: {user_id}) | Источник: {utm_source or 'organic'} | Рефералов: {ref_count}"
+    )
+
+    if message.bot:
+        for admin_id in sorted(settings.get_admin_ids()):
+            try:
+                await message.bot.send_message(
+                    chat_id=admin_id,
+                    text=admin_text,
+                    disable_notification=True,
+                )
+            except Exception as exc:
+                logger.warning(f"Failed to notify admin {admin_id} about payment: {exc}")

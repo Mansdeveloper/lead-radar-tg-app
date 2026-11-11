@@ -354,10 +354,12 @@
 
           <div class="p-3.5 sm:p-4 flex items-center justify-between gap-3 opacity-60">
             <div class="flex items-center space-x-3 min-w-0 flex-1">
-              <img src="/static/icons/habr.png" onerror="this.onerror=null;this.src='https://www.google.com/s2/favicons?domain=habr.com&sz=128'" alt="Хабр Фриланс" class="w-8 h-8 rounded-xl object-contain shrink-0 shadow-sm border border-black/[0.04] dark:border-white/[0.08] p-1 bg-white dark:bg-[#2C2C2E]">
+              <div class="w-8 h-8 rounded-xl shrink-0 shadow-sm border border-black/[0.04] dark:border-white/[0.08] bg-[#007AFF]/10 text-[#007AFF] flex items-center justify-center">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/></svg>
+              </div>
               <div class="min-w-0 flex-1">
-                <h4 class="text-sm font-bold font-display text-zinc-900 dark:text-white truncate">Хабр Фриланс</h4>
-                <p class="text-xs text-[#8E8E93] mt-0.5 truncate">Интеграция API в разработке</p>
+                <h4 class="text-sm font-bold font-display text-zinc-900 dark:text-white truncate">Telegram-каналы заказов</h4>
+                <p class="text-xs text-[#8E8E93] mt-0.5 truncate">Мониторинг чатов и каналов</p>
               </div>
             </div>
             <span class="inline-flex items-center space-x-1.5 text-xs font-medium text-[#8E8E93] shrink-0">
@@ -1363,7 +1365,7 @@
         fetch(`/api/user/${userId}/filters`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ keywords: kw, stop_words: sw, categories: [...selectedSpecialties].join(',') })
+          body: JSON.stringify({ keywords: kw, stop_words: sw, categories: selectedSpecialties.size > 0 ? [...selectedSpecialties].join(',') : 'all' })
         }).catch(() => {});
       } catch (e) {}
     }
@@ -1998,10 +2000,12 @@
           const swEl = document.getElementById('filter-stopwords');
           if (swEl) swEl.value = filters.stop_words || '';
 
-          if (filters && filters.categories && filters.categories !== 'all' && filters.categories.trim()) {
+          if (filters && filters.categories && filters.categories !== 'all' && filters.categories !== 'none' && filters.categories.trim()) {
             selectedSpecialties.clear();
             filters.categories.split(',').forEach(c => {
-              if (c.trim()) selectedSpecialties.add(c.trim());
+              const norm = c.trim().toLowerCase();
+              if (!norm || norm === 'none' || norm === 'all') return;
+              selectedSpecialties.add(norm === 'copywriting' ? 'copy' : norm);
             });
             syncSpecialtyUI();
             renderFeed();
@@ -2012,7 +2016,12 @@
                 const parsed = JSON.parse(saved);
                 if (Array.isArray(parsed) && parsed.length > 0) {
                   selectedSpecialties.clear();
-                  parsed.forEach(s => selectedSpecialties.add(s));
+                  parsed.forEach(s => {
+                    const norm = String(s).trim().toLowerCase();
+                    if (norm && norm !== 'none' && norm !== 'all') {
+                      selectedSpecialties.add(norm === 'copywriting' ? 'copy' : norm);
+                    }
+                  });
                   syncSpecialtyUI();
                   renderFeed();
                 }
@@ -2033,7 +2042,7 @@
         const res = await fetch(`/api/user/${userId}/filters`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ keywords, stop_words, categories: [...selectedSpecialties].join(',') })
+          body: JSON.stringify({ keywords, stop_words, categories: selectedSpecialties.size > 0 ? [...selectedSpecialties].join(',') : 'all' })
         });
         const data = await res.json();
         if (data.ok) {

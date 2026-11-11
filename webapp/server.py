@@ -167,6 +167,10 @@ def create_webapp(bot: Bot) -> web.Application:
         stop_words = body.get("stop_words", "")
         min_budget = int(body.get("min_budget", 0))
         categories = body.get("categories")
+        if categories is None:
+            existing_filter = await get_user_filters(user_id)
+            if (existing_filter.categories or "").strip().lower() == "none":
+                categories = "all"
 
         await update_user_full_filters(
             telegram_id=user_id,
@@ -254,6 +258,19 @@ def create_webapp(bot: Bot) -> web.Application:
             }
         )
 
+    async def handle_health(request: web.Request) -> web.Response:
+        return web.json_response({"ok": True, "status": "healthy"}, status=200)
+
+    async def handle_robots_txt(request: web.Request) -> web.Response:
+        return web.Response(
+            text="User-agent: *\nDisallow: /api/",
+            content_type="text/plain",
+            status=200,
+        )
+
+    async def handle_favicon(request: web.Request) -> web.Response:
+        return web.Response(status=204)
+
     # CORS & Routes
     async def add_cors_headers(request: web.Request, response: web.StreamResponse):
         response.headers["Access-Control-Allow-Origin"] = "*"
@@ -263,6 +280,10 @@ def create_webapp(bot: Bot) -> web.Application:
     app.on_response_prepare.append(add_cors_headers)
 
     app.router.add_get("/", handle_index)
+    app.router.add_get("/health", handle_health)
+    app.router.add_get("/api/health", handle_health)
+    app.router.add_get("/robots.txt", handle_robots_txt)
+    app.router.add_get("/favicon.ico", handle_favicon)
     static_dir = WEBAPP_DIR / "static"
     static_dir.mkdir(parents=True, exist_ok=True)
     app.router.add_static("/static", static_dir)

@@ -41,6 +41,10 @@ def matches_filter(
        the lead is matched against category markers or lead.category.
        If keywords are also specified, the lead is accepted if it matches EITHER category OR keyword (OR logic).
     """
+    # 0. Block un-onboarded users until they pick a specialty (or 'all')
+    if categories_str and categories_str.strip().lower() == "none":
+        return False
+
     # 1. Check stop words first (with word boundary safety for single words)
     if stop_words_str and stop_words_str.strip():
         stop_words = [w.strip().lower() for w in stop_words_str.split(",") if w.strip()]
@@ -225,6 +229,8 @@ async def dispatch_lead(bot: Bot, lead: RawLead) -> None:
     subscribers = await get_all_subscribers_with_filters()
 
     for user, user_filter in subscribers:
+        if (getattr(user_filter, "categories", "all") or "").strip().lower() == "none":
+            continue
         if not matches_user_filter(lead, user_filter):
             continue
 

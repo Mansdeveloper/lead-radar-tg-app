@@ -62,6 +62,9 @@ async def show_profile(event: Message | CallbackQuery):
             ],
             [
                 InlineKeyboardButton(text="💎 Premium", callback_data="buy_premium"),
+                InlineKeyboardButton(text="❓ Помощь / Stars", callback_data="open_help"),
+            ],
+            [
                 InlineKeyboardButton(text="🔙 В главное меню", callback_data="back_to_menu"),
             ],
         ]

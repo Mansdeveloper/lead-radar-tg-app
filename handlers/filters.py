@@ -6,6 +6,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 
 from database.crud import (
     get_user_filters,
+    update_user_full_filters,
     update_user_keywords,
     update_user_stop_words,
 )
@@ -40,9 +41,17 @@ async def render_filters_text(telegram_id: int) -> str:
     user_filter = await get_user_filters(telegram_id)
     kw = user_filter.keywords if user_filter.keywords else "<i>Все заказы подряд</i>"
     sw = user_filter.stop_words if user_filter.stop_words else "<i>Не заданы</i>"
+    cats_raw = (user_filter.categories or "all").strip().lower()
+    if cats_raw == "none":
+        cat_text = "<i>Не выбран (выберите в /start)</i>"
+    elif cats_raw == "all":
+        cat_text = "<i>Все направления</i>"
+    else:
+        cat_text = cats_raw
 
     return (
         "⚙️ <b>Настройки фильтрации заказов</b>\n\n"
+        f"📂 <b>Направление:</b> {cat_text}\n"
         f"🔍 <b>Ключевые слова:</b> {kw}\n"
         "<i>(Бот присылает заказы, если в названии или описании есть хотя бы одно из этих слов)</i>\n\n"
         f"🚫 <b>Стоп-слова:</b> {sw}\n"
@@ -86,7 +95,18 @@ async def process_keywords(message: Message, state: FSMContext):
     else:
         keywords = text
 
-    await update_user_keywords(message.from_user.id, keywords)
+    user_filter = await get_user_filters(message.from_user.id)
+    if (user_filter.categories or "").strip().lower() == "none":
+        await update_user_full_filters(
+            telegram_id=message.from_user.id,
+            keywords=keywords,
+            stop_words=user_filter.stop_words or "",
+            min_budget=user_filter.min_budget or 0,
+            categories="all",
+        )
+    else:
+        await update_user_keywords(message.from_user.id, keywords)
+
     await check_and_grant_achievements(message.from_user.id, bot=message.bot)
     await state.clear()
     await message.answer("✅ Ключевые слова успешно обновлены!")
@@ -122,7 +142,12 @@ async def process_stop_words(message: Message, state: FSMContext):
 
 @router.callback_query(F.data == "reset_filters")
 async def reset_filters_handler(callback: CallbackQuery):
-    await update_user_keywords(callback.from_user.id, "")
-    await update_user_stop_words(callback.from_user.id, "")
+    await update_user_full_filters(
+        telegram_id=callback.from_user.id,
+        keywords="",
+        stop_words="",
+        min_budget=0,
+        categories="all",
+    )
     await callback.answer("🔄 Фильтры сброшены", show_alert=True)
     await show_filters(callback)
