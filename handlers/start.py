@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 import html
 import time
+import urllib.parse
 from aiogram import F, Router
 from aiogram.filters import Command, CommandStart
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message, WebAppInfo
@@ -38,7 +39,7 @@ async def render_welcome(event: Message | CallbackQuery):
     referred_by = None
     utm_source = None
     if isinstance(event, Message) and event.text and len(event.text.split()) > 1:
-        param = event.text.split()[1].strip()
+        param = urllib.parse.unquote(event.text.split()[1].strip())
         if param.startswith("ref_"):
             try:
                 ref_id = int(param.replace("ref_", ""))
@@ -48,8 +49,11 @@ async def render_welcome(event: Message | CallbackQuery):
                 pass
         else:
             param_lower = param.lower()
-            if param_lower.startswith(("utm_", "c_", "ad_", "promo_")) or "utm" in param_lower:
-                utm_source = param[:128]
+            if (
+                param_lower.startswith(("utm_", "c_", "ad_", "promo_", "utm-", "c-", "ad-", "promo-"))
+                or "utm" in param_lower
+            ):
+                utm_source = param_lower[:128]
 
     db_user, created = await get_or_create_user(
         telegram_id=user_id,
@@ -396,6 +400,8 @@ async def back_to_menu_callback(callback: CallbackQuery):
 @router.message(Command("stats"))
 @router.message(Command("analytics"))
 async def cmd_analytics(message: Message):
+    if not message.from_user:
+        return
     user_id = message.from_user.id
     if not settings.is_admin(user_id):
         await message.answer("⛔ Доступ к статистике разрешен только администраторам.")
@@ -441,5 +447,20 @@ async def cmd_analytics(message: Message):
         f"  💎 На Premium/Trial: <b>{total_prem_trial}</b> (Prem: {total_prem} | Trial: {total_trial})"
     )
 
-    await message.answer("\n".join(lines), parse_mode="HTML")
+    full_text = "\n".join(lines)
+    if len(full_text) <= 4000:
+        await message.answer(full_text, parse_mode="HTML")
+    else:
+        current_chunk: list[str] = []
+        current_len = 0
+        for line in lines:
+            if current_len + len(line) + 1 > 4000 and current_chunk:
+                await message.answer("\n".join(current_chunk), parse_mode="HTML")
+                current_chunk = [line]
+                current_len = len(line)
+            else:
+                current_chunk.append(line)
+                current_len += len(line) + 1
+        if current_chunk:
+            await message.answer("\n".join(current_chunk), parse_mode="HTML")
 

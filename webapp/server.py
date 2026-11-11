@@ -224,6 +224,15 @@ def create_webapp(bot: Bot) -> web.Application:
         return web.json_response({"ok": True, "lead_id": lead.id, "pitch": pitch})
 
     async def get_admin_utm_stats_api(request: web.Request) -> web.Response:
+        user_id_param = request.query.get("user_id")
+        if user_id_param:
+            try:
+                uid = int(user_id_param)
+                if not settings.is_admin(uid):
+                    return web.json_response({"ok": False, "error": "Forbidden: Admin access required"}, status=403)
+            except (ValueError, TypeError):
+                return web.json_response({"ok": False, "error": "Invalid user_id parameter"}, status=400)
+
         stats = await get_utm_analytics()
         total_users = sum(s["total_users"] for s in stats)
         total_active = sum(s["active_users"] for s in stats)

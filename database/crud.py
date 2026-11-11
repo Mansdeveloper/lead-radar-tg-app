@@ -53,9 +53,16 @@ async def get_or_create_user(
                     referrer.trial_expired_notified = True
                     await session.commit()
         else:
+            updated = False
             # Grant trial if existing user never had trial_until initialized and is not premium
             if user.trial_until is None and not user.is_premium and not user.trial_expired_notified:
                 user.trial_until = now + timedelta(hours=24)
+                updated = True
+            # Backfill UTM attribution if previously unattributed
+            if user.utm_source is None and utm_source:
+                user.utm_source = utm_source
+                updated = True
+            if updated:
                 await session.commit()
                 await session.refresh(user)
 
@@ -529,7 +536,7 @@ async def get_utm_analytics() -> list[dict]:
 
     stats_map: dict[str, dict] = {}
     for u in users:
-        source = u.utm_source.strip() if u.utm_source and u.utm_source.strip() else "organic"
+        source = u.utm_source.strip().lower() if u.utm_source and u.utm_source.strip() else "organic"
         if source not in stats_map:
             stats_map[source] = {
                 "utm_source": source,

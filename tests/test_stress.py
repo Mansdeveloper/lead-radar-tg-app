@@ -186,6 +186,56 @@ class TestUtmTrackingAndAnalytics(unittest.IsolatedAsyncioTestCase):
             self.assertIn("utm_promo_test", out_text)
             self.assertIn("ИТОГО:", out_text)
 
+    async def test_utm_source_backfill_and_first_touch_preservation(self):
+        """Edge case: Unattributed existing user backfills UTM on campaign click, but preserves first-touch afterwards."""
+        u, created = await get_or_create_user(880006, username="legacy_user", utm_source=None)
+        self.assertTrue(created)
+        self.assertIsNone(u.utm_source)
+
+        # User later clicks a campaign link: attribution is backfilled
+        u_updated, created_2 = await get_or_create_user(880006, utm_source="utm_retargeting")
+        self.assertFalse(created_2)
+        self.assertEqual(u_updated.utm_source, "utm_retargeting")
+
+        # User subsequently clicks another link: first touch is preserved
+        u_final, created_3 = await get_or_create_user(880006, utm_source="utm_second_touch")
+        self.assertFalse(created_3)
+        self.assertEqual(u_final.utm_source, "utm_retargeting")
+
+    async def test_admin_auth_fail_closed_and_api_security(self):
+        """Security: Empty ADMIN_IDS must fail-closed (deny all), and API must reject unauthorized users."""
+        with patch.object(settings, "ADMIN_IDS", ""):
+            self.assertFalse(settings.is_admin(880001))
+            self.assertFalse(settings.is_admin(123456))
+
+        with patch.object(settings, "ADMIN_IDS", "880001"):
+            self.assertTrue(settings.is_admin(880001))
+            self.assertFalse(settings.is_admin(880002))
+
+        # Test WebApp API security
+        mock_bot = MagicMock()
+        mock_info = MagicMock()
+        mock_info.username = "test_bot"
+        mock_bot.get_me = AsyncMock(return_value=mock_info)
+        webapp = create_webapp(mock_bot)
+        client = TestClient(TestServer(webapp))
+        await client.start_server()
+
+        with patch.object(settings, "ADMIN_IDS", "880001"):
+            # 1. Non-admin user rejected with 403
+            resp_forbidden = await client.get("/api/admin/utm_stats?user_id=880002")
+            self.assertEqual(resp_forbidden.status, 403)
+            data_forbidden = await resp_forbidden.json()
+            self.assertFalse(data_forbidden["ok"])
+
+            # 2. Admin user authorized with 200
+            resp_ok = await client.get("/api/admin/utm_stats?user_id=880001")
+            self.assertEqual(resp_ok.status, 200)
+            data_ok = await resp_ok.json()
+            self.assertTrue(data_ok["ok"])
+
+        await client.close()
+
 
 class TestStressSystem(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):

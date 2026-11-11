@@ -25,8 +25,8 @@ class Settings(BaseSettings):
     WEBAPP_PORT: int = int(os.environ.get("PORT", 8080))
     WEBAPP_URL: str = os.environ.get("WEBAPP_URL", "")  # Configured by Railway / public domain
 
-    # Admin settings
-    ADMIN_IDS: str = ""
+    # Admin settings (default: bot creator telegram_id)
+    ADMIN_IDS: str = "875592041"
 
     def get_admin_ids(self) -> set[int]:
         ids = set()
@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     def is_admin(self, user_id: int) -> bool:
         admin_ids = self.get_admin_ids()
         if not admin_ids:
-            return True
+            return False
         return user_id in admin_ids
 
     model_config = SettingsConfigDict(
